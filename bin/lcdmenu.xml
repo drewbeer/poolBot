@@ -1,86 +1,64 @@
 <application>
   <settings lcdColor="White" lcdBackground="On" />
-  <folder text="Pumps -&gt;">
-    <folder text="Main -&gt;">
+  <folder text="Modes -&gt;">
+    <widget text="Auto" function="ModeAuto" />
+    <widget text="Party 88" function="ModeParty88" />
+    <widget text="Spa Spa Spa" function="ModeSpa3" />
+    <widget text="Ambience" function="ModeAbience" />
+    <widget text="Light it up" function="ModeLightItUp" />
+    <widget text="&lt;- Back" function="goBack" />
+  </folder>
+  <folder text="Pumping -&gt;">
+    <folder text="Main Pump -&gt;">
       <widget text="Settings" function="PumpMainControl" />
       <widget text="Timer" function="PumpMainTimer" />
       <widget text="&lt;- Back" function="goBack" />
     </folder>
-    <folder text="Spa -&gt;">
-      <widget text="Toggle" function="TempBaroView" />
-      <widget text="Timer" function="TempBaroCalibrate" />
+    <folder text="Spa Jets -&gt;">
+      <widget text="Timer" function="PumpSpaTimer" />
+      <widget text="on/off" function="PumpSpaToggle" />
       <widget text="&lt;- Back" function="goBack" />
     </folder>
     <widget text="&lt;- Back" function="goBack" />
   </folder>
-  <folder text="Valves -&gt;">
-    <widget text="Back" function="goBack" />
+  <folder text="Water Flow -&gt;">
     <folder text="Input">
-      <widget text="Back" function="goBack" />
-      <widget text="Drains" function="CompassGyroCalibrate" />
-      <widget text="Skimmer" function="CompassGyroCalibrateClear" />
-      <widget text="Both" function="CompassGyroCalibrateClear" />
+      <widget text="Auto" function="ValvesInputAuto" />
+      <widget text="Drains" function="ValvesInputDrains" />
+      <widget text="Skimmer" function="ValvesInputSkimmer" />
+      <widget text="&lt;- Back" function="goBack" />
     </folder>
-    <folder text="Output">
-      <widget text="Back" function="goBack" />
-      <widget text="Pool" function="TempBaroView" />
-      <widget text="Spa" function="TempBaroCalibrate" />
-      <widget text="Both" function="TempBaroCalibrate" />
+    <folder text="Output -&gt;">
+      <widget text="Auto" function="ValvesOutputAuto" />
+      <widget text="Pool" function="ValvesOutputPool" />
+      <widget text="Spa" function="ValvesOutputSpa" />
+      <widget text="&lt;- Back" function="goBack" />
     </folder>
+    <widget text="&lt;- Back" function="goBack" />
   </folder>
-  <folder text="Salt System">
-      <widget text="Back" function="goBack" />
-      <widget text="Toggle" function="AstroViewAll" />
+  <folder text="Salt System -&gt;">
+      <widget text="on/off" function="SaltSystemToggle" />
+      <widget text="&lt;- Back" function="goBack" />
   </folder>
-  <folder text="Heat">
-    <widget text="Back" function="goBack" />
-    <widget text="Temperature" function="AstroViewAll" />
-    <widget text="Toggle" function="AstroViewAll" />
+  <folder text="Heating -&gt;">
+    <widget text="Temperature" function="HeatingTemp" />
+    <widget text="on/off" function="HeatingToggle" />
+    <widget text="&lt;- Back" function="goBack" />
   </folder>
-  <folder text="Lighting">
-    <widget text="Back" function="goBack" />
-    <widget text="Pool" function="AstroViewAll" />
-    <widget text="Spa" function="AstroViewAll" />
-    <widget text="Sky" function="AstroViewAll" />
-    <widget text="Bar" function="AstroViewAll" />
-    <widget text="Ambient" function="AstroViewAll" />
+  <folder text="Lighting -&gt;">
+    <widget text="Pool" function="LightingPool" />
+    <widget text="Spa" function="LightingSpa" />
+    <widget text="Sky" function="LightingSky" />
+    <widget text="Bar" function="LightingBar" />
+    <widget text="Ambient" function="LightingAmbient" />
+    <widget text="&lt;- Back" function="goBack" />
   </folder>
-  <folder text="Sensors">
-    <widget text="Back" function="goBack" />
-    <folder text="Compass/Gyro">
-      <widget text="Back" function="goBack" />
-      <widget text="View Accelerate" function="CompassGyroViewAcc" />
-      <widget text="View Magnetics" function="CompassGyroViewMag" />
-      <widget text="View Heading" function="CompassGyroViewHeading" />
-      <widget text="View Temp" function="CompassGyroViewTemp" />
-      <widget text="Calibrate" function="CompassGyroCalibrate" />
-      <widget text="Calibrate Clear" function="CompassGyroCalibrateClear" />
-    </folder>
-    <folder text="Temp/Baro">
-      <widget text="Back" function="goBack" />
-      <widget text="View Info" function="TempBaroView" />
-      <widget text="Calibrate" function="TempBaroCalibrate" />
-    </folder>
-  </folder>
-  <folder text="System Info">
-    <widget text="Back" function="goBack" />
+  <folder text="System Info -&gt;">
+    <widget text="Show Dashboard" function="ShowDashboard" />
     <widget text="Show Date/Time" function="ShowDateTime" />
-    <widget text="Set Date/Time" function="SetDateTime" />
-    <folder text="Network">
-      <widget text="Back" function="goBack" />
-      <widget text="IP Address" function="ShowIPAddress" />
-      <widget text="Use 10.1.1.2" function="Use10Network" />
-      <widget text="Use DHCP" function="UseDHCP" />
-    </folder>
-    <folder text="Location">
-      <widget text="Back" function="goBack" />
-      <widget text="Show Lat/Lon" function="ShowLatLon" />
-      <widget text="Set Lat/Lon" function="SetLatLon" />
-      <widget text="Set Location" function="SetLocation" />
-    </folder>
+    <widget text="&lt;- Back" function="goBack" />
   </folder>
   <widget text="Quit" function="DoQuit" />
   <widget text="Reboot" function="DoReboot" />
   <widget text="Shutdown" function="DoShutdown" />
 </application>
-
