@@ -7,15 +7,13 @@
 
 import commands
 import os
+import RPi.GPIO as GPIO
 from string import split
 from time import sleep, strftime, localtime
 from xml.dom.minidom import *
-from Adafruit_I2C import Adafruit_I2C
-from Adafruit_MCP230xx import Adafruit_MCP230XX
-from Adafruit_CharLCDPlate import Adafruit_CharLCDPlate
+from Adafruit_CharLCD import Adafruit_CharLCD
+from subprocess import *
 from ListSelector import ListSelector
-
-import smbus
 
 configfile = 'lcdmenu.xml'
 # set DEBUG=1 for print debug statements
@@ -23,14 +21,22 @@ DEBUG = 0
 DISPLAY_ROWS = 2
 DISPLAY_COLS = 16
 
+# initialize the gpio
+#GPIO.setmode(GPIO.BCM)
+
+#GPIO.setup(26, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+#GPIO.wait_for_edge(26, GPIO.FALLING)
+#subprocess.call(['wall red'], shell=True)
+#GPIO.cleanup()
+
 # set busnum param to the correct value for your pi
-lcd = Adafruit_CharLCDPlate(busnum = 1)
+lcd = Adafruit_CharLCD()
 # in case you add custom logic to lcd to check if it is connected (useful)
 #if lcd.connected == 0:
 #    quit()
 
 lcd.begin(DISPLAY_COLS, DISPLAY_ROWS)
-lcd.backlight(lcd.OFF)
+#lcd.backlight(lcd.OFF)
 
 # commands
 def DoQuit():
@@ -43,7 +49,8 @@ def DoQuit():
             lcd.clear()
             lcd.backlight(lcd.OFF)
             quit()
-        sleep(0.25)
+        sleep(0.25)ls
+
 
 def DoShutdown():
     lcd.clear()
@@ -77,24 +84,6 @@ def LcdOff():
 def LcdOn():
     lcd.backlight(lcd.ON)
 
-def LcdRed():
-    lcd.backlight(lcd.RED)
-
-def LcdGreen():
-    lcd.backlight(lcd.GREEN)
-
-def LcdBlue():
-    lcd.backlight(lcd.BLUE)
-
-def LcdYellow():
-    lcd.backlight(lcd.YELLOW)
-
-def LcdTeal():
-    lcd.backlight(lcd.TEAL)
-
-def LcdViolet():
-    lcd.backlight(lcd.VIOLET)
-
 def ShowDateTime():
     if DEBUG:
         print('in ShowDateTime')
@@ -103,7 +92,7 @@ def ShowDateTime():
         sleep(0.25)
         lcd.home()
         lcd.message(strftime('%a %b %d %Y\n%I:%M:%S %p', localtime()))
-    
+
 def ValidateDateDigit(current, curval):
     # do validation/wrapping
     if current == 0: # Mm
@@ -208,7 +197,7 @@ def ShowIPAddress():
         if lcd.buttonPressed(lcd.LEFT):
             break
         sleep(0.25)
-    
+
 #only use the following if you find useful
 def Use10Network():
     "Allows you to switch to a different network for local connection"
@@ -250,7 +239,7 @@ def ShowLatLon():
 def SetLatLon():
     if DEBUG:
         print('in SetLatLon')
-    
+
 def SetLocation():
     if DEBUG:
         print('in SetLocation')
@@ -284,11 +273,11 @@ def CompassGyroViewTemp():
 def CompassGyroCalibrate():
     if DEBUG:
         print('in CompassGyroCalibrate')
-    
+
 def CompassGyroCalibrateClear():
     if DEBUG:
         print('in CompassGyroCalibrateClear')
-    
+
 def TempBaroView():
     if DEBUG:
         print('in TempBaroView')
@@ -296,7 +285,7 @@ def TempBaroView():
 def TempBaroCalibrate():
     if DEBUG:
         print('in TempBaroCalibrate')
-    
+
 def AstroViewAll():
     if DEBUG:
         print('in AstroViewAll')
@@ -304,7 +293,7 @@ def AstroViewAll():
 def AstroViewAltAz():
     if DEBUG:
         print('in AstroViewAltAz')
-    
+
 def AstroViewRADecl():
     if DEBUG:
         print('in AstroViewRADecl')
@@ -312,7 +301,7 @@ def AstroViewRADecl():
 def CameraDetect():
     if DEBUG:
         print('in CameraDetect')
-    
+
 def CameraTakePicture():
     if DEBUG:
         print('in CameraTakePicture')
@@ -336,7 +325,7 @@ class CommandToRun:
                         break
                     sleep(0.25)
                 lcd.clear()
-                lcd.message(self.clist[i-1]+'\n'+self.clist[i])          
+                lcd.message(self.clist[i-1]+'\n'+self.clist[i])
                 sleep(0.5)
         while 1:
             if lcd.buttonPressed(lcd.LEFT):
@@ -346,7 +335,7 @@ class Widget:
     def __init__(self, myName, myFunction):
         self.text = myName
         self.function = myFunction
-        
+
 class Folder:
     def __init__(self, myName, myParent):
         self.text = myName
@@ -539,4 +528,3 @@ while 1:
 		display.update('s')
 		display.display()
 		sleep(0.25)
-
