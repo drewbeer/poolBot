@@ -300,9 +300,9 @@ up = GPIO.input(UP)
 
 while 1:
 
-  ok = GPIO.input(OK)
-  dn = GPIO.input(DN)
-  up = GPIO.input(UP)
+	ok = GPIO.input(OK)
+	dn = GPIO.input(DN)
+	up = GPIO.input(UP)
 
 	if up == False:
 		display.update('u')
