@@ -32,6 +32,12 @@ UP = 13
 OK = 27
 DN = 26
 
+# RELAYS
+SpaRelay = 16
+SaltRelay = 18
+HeaterRelay = 19
+LightRelay = 20
+
 # set busnum param to the correct value for your pi
 lcd = Adafruit_CharLCD()
 
@@ -103,18 +109,34 @@ def SetLocation():
 
 # Spa controls
 def PumpSpaToggle():
-    lcd.clear()
-    spaJetsStatus = 0
-    lcd.message('Spa jets are %s\ntoggle with sel ' % spaJetsStatus)
+    sleep(0.25)
     while 1:
-        if GPIO.input(UP):
+        spaJetStatus = GPIO.input(SpaRelay)
+	# if the jets are off
+    	if spaJetStatus:
+	   if DEBUG:
+		print('jets off')
+	   spaJetsMsg = "off"
+	   spaToggleVal = 0
+	   spaToggleMsg = "on"
+	# if the jets are already on
+    	if not spaJetStatus:
+	   if DEBUG:
+		print('jets on')
+	   spaJetsMsg = "on"
+	   spaToggleVal = 1
+	   spaToggleMsg = "off"
+
+        lcd.clear()
+        lcd.message('Spa Booster\nStatus:  %s ' % spaJetsMsg)
+        if not GPIO.input(UP) or not GPIO.input(DN):
             break
-        if GPIO.input(OK):
-            spaJetsStatus = 1
+        if not GPIO.input(OK):
             lcd.clear()
-            lcd.message('Turning jets on')
+            lcd.message('Turning jets %s' % spaToggleMsg)
+	    GPIO.output(SpaRelay, spaToggleVal)
             sleep(1.5)
-            break
+        #    break
         sleep(0.25)
 
 
@@ -293,6 +315,9 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(OK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(DN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(UP, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+# relays
+GPIO.setup(SpaRelay, GPIO.OUT, initial=GPIO.HIGH)
 
 ok = GPIO.input(OK)
 dn = GPIO.input(DN)
