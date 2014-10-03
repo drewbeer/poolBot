@@ -83,152 +83,6 @@ def ShowDateTime():
         lcd.home()
         lcd.message(strftime('%a %b %d %Y\n%I:%M:%S %p', localtime()))
 
-def ValidateDateDigit(current, curval):
-    # do validation/wrapping
-    if current == 0: # Mm
-        if curval < 1:
-            curval = 12
-        elif curval > 12:
-            curval = 1
-    elif current == 1: #Dd
-        if curval < 1:
-            curval = 31
-        elif curval > 31:
-            curval = 1
-    elif current == 2: #Yy
-        if curval < 1950:
-            curval = 2050
-        elif curval > 2050:
-            curval = 1950
-    elif current == 3: #Hh
-        if curval < 0:
-            curval = 23
-        elif curval > 23:
-            curval = 0
-    elif current == 4: #Mm
-        if curval < 0:
-            curval = 59
-        elif curval > 59:
-            curval = 0
-    elif current == 5: #Ss
-        if curval < 0:
-            curval = 59
-        elif curval > 59:
-            curval = 0
-    return curval
-
-def SetDateTime():
-    if DEBUG:
-        print('in SetDateTime')
-    # M D Y H:M:S AM/PM
-    curtime = localtime()
-    month = curtime.tm_mon
-    day = curtime.tm_mday
-    year = curtime.tm_year
-    hour = curtime.tm_hour
-    minute = curtime.tm_min
-    second = curtime.tm_sec
-    ampm = 0
-    if hour > 11:
-        hour -= 12
-        ampm = 1
-    curr = [0,0,0,1,1,1]
-    curc = [2,5,11,1,4,7]
-    curvalues = [month, day, year, hour, minute, second]
-    current = 0 # start with month, 0..14
-
-    lcd.clear()
-    lcd.message(strftime("%b %d, %Y  \n%I:%M:%S %p  ", curtime))
-    lcd.blink()
-    lcd.setCursor(curc[current], curr[current])
-    sleep(0.5)
-    while 1:
-        curval = curvalues[current]
-        if lcd.buttonPressed(lcd.UP):
-            curval += 1
-            curvalues[current] = ValidateDateDigit(current, curval)
-            curtime = (curvalues[2], curvalues[0], curvalues[1], curvalues[3], curvalues[4], curvalues[5], 0, 0, 0)
-            lcd.home()
-            lcd.message(strftime("%b %d, %Y  \n%I:%M:%S %p  ", curtime))
-            lcd.setCursor(curc[current], curr[current])
-        if lcd.buttonPressed(lcd.DOWN):
-            curval -= 1
-            curvalues[current] = ValidateDateDigit(current, curval)
-            curtime = (curvalues[2], curvalues[0], curvalues[1], curvalues[3], curvalues[4], curvalues[5], 0, 0, 0)
-            lcd.home()
-            lcd.message(strftime("%b %d, %Y  \n%I:%M:%S %p  ", curtime))
-            lcd.setCursor(curc[current], curr[current])
-        if lcd.buttonPressed(lcd.RIGHT):
-            current += 1
-            if current > 5:
-                current = 5
-            lcd.setCursor(curc[current], curr[current])
-        if lcd.buttonPressed(lcd.LEFT):
-            current -= 1
-            if current < 0:
-                lcd.noBlink()
-                return
-            lcd.setCursor(curc[current], curr[current])
-        if lcd.buttonPressed(lcd.SELECT):
-            # set the date time in the system
-            lcd.noBlink()
-            os.system(strftime('sudo date --set="%d %b %Y %H:%M:%S"', curtime))
-            break
-        sleep(0.25)
-
-    lcd.noBlink()
-
-def ShowIPAddress():
-    if DEBUG:
-        print('in ShowIPAddress')
-    lcd.clear()
-    lcd.message(commands.getoutput("/sbin/ifconfig").split("\n")[1].split()[1][5:])
-    while 1:
-        if lcd.buttonPressed(lcd.LEFT):
-            break
-        sleep(0.25)
-
-#only use the following if you find useful
-def Use10Network():
-    "Allows you to switch to a different network for local connection"
-    lcd.clear()
-    lcd.message('Are you sure?\nPress Sel for Y')
-    while 1:
-        if lcd.buttonPressed(lcd.LEFT):
-            break
-        if lcd.buttonPressed(lcd.SELECT):
-            # uncomment the following once you have a separate network defined
-            #commands.getoutput("sudo cp /etc/network/interfaces.hub.10 /etc/network/interfaces")
-            lcd.clear()
-            lcd.message('Please reboot')
-            sleep(1.5)
-            break
-        sleep(0.25)
-
-#only use the following if you find useful
-def UseDHCP():
-    "Allows you to switch to a network config that uses DHCP"
-    lcd.clear()
-    lcd.message('Are you sure?\nPress Sel for Y')
-    while 1:
-        if lcd.buttonPressed(lcd.LEFT):
-            break
-        if lcd.buttonPressed(lcd.SELECT):
-            # uncomment the following once you get an original copy in place
-            #commands.getoutput("sudo cp /etc/network/interfaces.orig /etc/network/interfaces")
-            lcd.clear()
-            lcd.message('Please reboot')
-            sleep(1.5)
-            break
-        sleep(0.25)
-
-def ShowLatLon():
-    if DEBUG:
-        print('in ShowLatLon')
-
-def SetLatLon():
-    if DEBUG:
-        print('in SetLatLon')
 
 def SetLocation():
     if DEBUG:
@@ -244,57 +98,27 @@ def SetLocation():
     if (item >= 0):
         chosen = list[item]
 
-def CompassGyroViewAcc():
-    if DEBUG:
-        print('in CompassGyroViewAcc')
+## main stuff
 
-def CompassGyroViewMag():
-    if DEBUG:
-        print('in CompassGyroViewMag')
 
-def CompassGyroViewHeading():
-    if DEBUG:
-        print('in CompassGyroViewHeading')
+# Spa controls
+def PumpSpaToggle():
+    lcd.clear()
+    spaJetsStatus = 0
+    lcd.message('Spa jets are %s\ntoggle with sel ' % spaJetsStatus)
+    while 1:
+        if GPIO.input(UP):
+            break
+        if GPIO.input(OK):
+            spaJetsStatus = 1
+            lcd.clear()
+            lcd.message('Turning jets on')
+            sleep(1.5)
+            break
+        sleep(0.25)
 
-def CompassGyroViewTemp():
-    if DEBUG:
-        print('in CompassGyroViewTemp')
 
-def CompassGyroCalibrate():
-    if DEBUG:
-        print('in CompassGyroCalibrate')
-
-def CompassGyroCalibrateClear():
-    if DEBUG:
-        print('in CompassGyroCalibrateClear')
-
-def TempBaroView():
-    if DEBUG:
-        print('in TempBaroView')
-
-def TempBaroCalibrate():
-    if DEBUG:
-        print('in TempBaroCalibrate')
-
-def AstroViewAll():
-    if DEBUG:
-        print('in AstroViewAll')
-
-def AstroViewAltAz():
-    if DEBUG:
-        print('in AstroViewAltAz')
-
-def AstroViewRADecl():
-    if DEBUG:
-        print('in AstroViewRADecl')
-
-def CameraDetect():
-    if DEBUG:
-        print('in CameraDetect')
-
-def CameraTakePicture():
-    if DEBUG:
-        print('in CameraTakePicture')
+## functions and classes
 
 def goBack():
     if DEBUG:
@@ -334,29 +158,12 @@ class Folder:
         self.items = []
         self.parent = myParent
 
-def HandleSettings(node):
-    global lcd
-    if node.getAttribute('lcdColor').lower() == 'red':
-        lcd.backlight(lcd.RED)
-    elif node.getAttribute('lcdColor').lower() == 'green':
-        lcd.backlight(lcd.GREEN)
-    elif node.getAttribute('lcdColor').lower() == 'blue':
-        lcd.backlight(lcd.BLUE)
-    elif node.getAttribute('lcdColor').lower() == 'yellow':
-        lcd.backlight(lcd.YELLOW)
-    elif node.getAttribute('lcdColor').lower() == 'teal':
-        lcd.backlight(lcd.TEAL)
-    elif node.getAttribute('lcdColor').lower() == 'violet':
-        lcd.backlight(lcd.VIOLET)
-
 def ProcessNode(currentNode, currentItem):
     children = currentNode.childNodes
 
     for child in children:
         if isinstance(child, xml.dom.minidom.Element):
-            if child.tagName == 'settings':
-                HandleSettings(child)
-            elif child.tagName == 'folder':
+            if child.tagName == 'folder':
                 thisFolder = Folder(child.getAttribute('text'), currentItem)
                 currentItem.items.append(thisFolder)
                 ProcessNode(child, thisFolder)
@@ -415,7 +222,6 @@ class Display:
         elif command == 'd':
             self.down()
         elif command == 's':
-#            self.right()
             self.select()
     def up(self):
         if self.curSelectedItem == 0:
@@ -453,18 +259,6 @@ class Display:
                 self.curFolder = self.curFolder.parent
                 self.curTopItem = 0
                 self.curSelectedItem = 0
-    def right(self):
-        if isinstance(self.curFolder.items[self.curSelectedItem], Folder):
-            self.curFolder = self.curFolder.items[self.curSelectedItem]
-            self.curTopItem = 0
-            self.curSelectedItem = 0
-        elif isinstance(self.curFolder.items[self.curSelectedItem], Widget):
-            if DEBUG:
-                print('eval', self.curFolder.items[self.curSelectedItem].function)
-            eval(self.curFolder.items[self.curSelectedItem].function+'()')
-        elif isinstance(self.curFolder.items[self.curSelectedItem], CommandToRun):
-            self.curFolder.items[self.curSelectedItem].Run()
-
     def select(self):
         if DEBUG:
             print('check widget')
@@ -478,10 +272,6 @@ class Display:
             eval(self.curFolder.items[self.curSelectedItem].function+'()')
         elif isinstance(self.curFolder.items[self.curSelectedItem], CommandToRun):
             self.curFolder.items[self.curSelectedItem].Run()
-#        if isinstance(self.curFolder.items[self.curSelectedItem], Widget):
-#            if DEBUG:
-#                print('eval', self.curFolder.items[self.curSelectedItem].function)
-#            eval(self.curFolder.items[self.curSelectedItem].function+'()')
 
 # now start things up
 uiItems = Folder('root','')
@@ -510,9 +300,9 @@ up = GPIO.input(UP)
 
 while 1:
 
-        ok = GPIO.input(OK)
-        dn = GPIO.input(DN)
-        up = GPIO.input(UP)
+  ok = GPIO.input(OK)
+  dn = GPIO.input(DN)
+  up = GPIO.input(UP)
 
 	if up == False:
 		display.update('u')
