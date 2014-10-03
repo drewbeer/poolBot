@@ -1,32 +1,54 @@
 <application>
   <settings lcdColor="White" lcdBackground="On" />
-  <folder text="System Info">
-    <widget text="Show Date/Time" function="ShowDateTime" />
-    <widget text="Set Date/Time" function="SetDateTime" />
-    <folder text="Network">
-      <widget text="IP Address" function="ShowIPAddress" />
-      <widget text="Use 10.1.1.2" function="Use10Network" />
-      <widget text="Use DHCP" function="UseDHCP" />
+  <folder text="Pumps -&gt;">
+    <folder text="Main -&gt;">
+      <widget text="Settings" function="PumpMainControl" />
+      <widget text="Timer" function="PumpMainTimer" />
+      <widget text="&lt;- Back" function="goBack" />
     </folder>
-    <folder text="Location">
-      <widget text="Show Lat/Lon" function="ShowLatLon" />
-      <widget text="Set Lat/Lon" function="SetLatLon" />
-      <widget text="Set Location" function="SetLocation" />
+    <folder text="Spa -&gt;">
+      <widget text="Toggle" function="TempBaroView" />
+      <widget text="Timer" function="TempBaroCalibrate" />
+      <widget text="&lt;- Back" function="goBack" />
     </folder>
-    <folder text="LCD Color">
-      <widget text="Red" function="LcdRed" />
-      <widget text="Green" function="LcdGreen" />
-      <widget text="Blue" function="LcdBlue" />
-      <widget text="Yellow" function="LcdYellow" />
-      <widget text="Teal" function="LcdTeal" />
-      <widget text="Violet" function="LcdViolet" />
-      <widget text="White" function="LcdOn" />
-      <widget text="Off" function="LcdOff" />
+    <widget text="&lt;- Back" function="goBack" />
+  </folder>
+  <folder text="Valves -&gt;">
+    <widget text="Back" function="goBack" />
+    <folder text="Input">
+      <widget text="Back" function="goBack" />
+      <widget text="Drains" function="CompassGyroCalibrate" />
+      <widget text="Skimmer" function="CompassGyroCalibrateClear" />
+      <widget text="Both" function="CompassGyroCalibrateClear" />
     </folder>
-    <run text="Run ls">ls</run>
+    <folder text="Output">
+      <widget text="Back" function="goBack" />
+      <widget text="Pool" function="TempBaroView" />
+      <widget text="Spa" function="TempBaroCalibrate" />
+      <widget text="Both" function="TempBaroCalibrate" />
+    </folder>
+  </folder>
+  <folder text="Salt System">
+      <widget text="Back" function="goBack" />
+      <widget text="Toggle" function="AstroViewAll" />
+  </folder>
+  <folder text="Heat">
+    <widget text="Back" function="goBack" />
+    <widget text="Temperature" function="AstroViewAll" />
+    <widget text="Toggle" function="AstroViewAll" />
+  </folder>
+  <folder text="Lighting">
+    <widget text="Back" function="goBack" />
+    <widget text="Pool" function="AstroViewAll" />
+    <widget text="Spa" function="AstroViewAll" />
+    <widget text="Sky" function="AstroViewAll" />
+    <widget text="Bar" function="AstroViewAll" />
+    <widget text="Ambient" function="AstroViewAll" />
   </folder>
   <folder text="Sensors">
+    <widget text="Back" function="goBack" />
     <folder text="Compass/Gyro">
+      <widget text="Back" function="goBack" />
       <widget text="View Accelerate" function="CompassGyroViewAcc" />
       <widget text="View Magnetics" function="CompassGyroViewMag" />
       <widget text="View Heading" function="CompassGyroViewHeading" />
@@ -35,19 +57,27 @@
       <widget text="Calibrate Clear" function="CompassGyroCalibrateClear" />
     </folder>
     <folder text="Temp/Baro">
+      <widget text="Back" function="goBack" />
       <widget text="View Info" function="TempBaroView" />
       <widget text="Calibrate" function="TempBaroCalibrate" />
     </folder>
   </folder>
-  <folder text="Astronomy">
-    <widget text="Alt/Az, RA/Decl" function="AstroViewAll" />
-    <widget text="Alt/Az" function="AstroViewAltAz" />
-    <widget text="RA/Decl" function="AstroViewRADecl" />
-  </folder>
-  <folder text="Camera">
-    <widget text="Detect" function="CameraDetect" />
-    <widget text="Take Picture" function="CameraTakePicture" />
-    <widget text="Time Lapse" function="CameraTimeLapse" />
+  <folder text="System Info">
+    <widget text="Back" function="goBack" />
+    <widget text="Show Date/Time" function="ShowDateTime" />
+    <widget text="Set Date/Time" function="SetDateTime" />
+    <folder text="Network">
+      <widget text="Back" function="goBack" />
+      <widget text="IP Address" function="ShowIPAddress" />
+      <widget text="Use 10.1.1.2" function="Use10Network" />
+      <widget text="Use DHCP" function="UseDHCP" />
+    </folder>
+    <folder text="Location">
+      <widget text="Back" function="goBack" />
+      <widget text="Show Lat/Lon" function="ShowLatLon" />
+      <widget text="Set Lat/Lon" function="SetLatLon" />
+      <widget text="Set Location" function="SetLocation" />
+    </folder>
   </folder>
   <widget text="Quit" function="DoQuit" />
   <widget text="Reboot" function="DoReboot" />

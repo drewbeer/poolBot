@@ -17,26 +17,25 @@ from ListSelector import ListSelector
 
 configfile = 'lcdmenu.xml'
 # set DEBUG=1 for print debug statements
-DEBUG = 0
+DEBUG = 1
 DISPLAY_ROWS = 2
 DISPLAY_COLS = 16
 
-# initialize the gpio
-#GPIO.setmode(GPIO.BCM)
+# # Define GPIO inputs and outputs
+# MODE
+E_PULSE = 0.00005
+E_DELAY = 0.00005
+wait = 0.1
 
-#GPIO.setup(26, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-#GPIO.wait_for_edge(26, GPIO.FALLING)
-#subprocess.call(['wall red'], shell=True)
-#GPIO.cleanup()
+# BUTTONS
+UP = 13
+OK = 27
+DN = 26
 
 # set busnum param to the correct value for your pi
 lcd = Adafruit_CharLCD()
-# in case you add custom logic to lcd to check if it is connected (useful)
-#if lcd.connected == 0:
-#    quit()
 
 lcd.begin(DISPLAY_COLS, DISPLAY_ROWS)
-#lcd.backlight(lcd.OFF)
 
 # commands
 def DoQuit():
@@ -47,9 +46,8 @@ def DoQuit():
             break
         if lcd.buttonPressed(lcd.SELECT):
             lcd.clear()
-            lcd.backlight(lcd.OFF)
             quit()
-        sleep(0.25)ls
+        sleep(0.25)
 
 
 def DoShutdown():
@@ -60,7 +58,6 @@ def DoShutdown():
             break
         if lcd.buttonPressed(lcd.SELECT):
             lcd.clear()
-            lcd.backlight(lcd.OFF)
             commands.getoutput("sudo shutdown -h now")
             quit()
         sleep(0.25)
@@ -73,22 +70,15 @@ def DoReboot():
             break
         if lcd.buttonPressed(lcd.SELECT):
             lcd.clear()
-            lcd.backlight(lcd.OFF)
             commands.getoutput("sudo reboot")
             quit()
         sleep(0.25)
-
-def LcdOff():
-    lcd.backlight(lcd.OFF)
-
-def LcdOn():
-    lcd.backlight(lcd.ON)
 
 def ShowDateTime():
     if DEBUG:
         print('in ShowDateTime')
     lcd.clear()
-    while not(lcd.buttonPressed(lcd.LEFT)):
+    while not (GPIO.input(OK)):
         sleep(0.25)
         lcd.home()
         lcd.message(strftime('%a %b %d %Y\n%I:%M:%S %p', localtime()))
@@ -306,9 +296,11 @@ def CameraTakePicture():
     if DEBUG:
         print('in CameraTakePicture')
 
-def CameraTimeLapse():
+def goBack():
     if DEBUG:
-        print('in CameraTimeLapse')
+        print('in goBack')
+    display.update('l')
+    display.display()
 
 class CommandToRun:
     def __init__(self, myName, theCommand):
@@ -356,12 +348,6 @@ def HandleSettings(node):
         lcd.backlight(lcd.TEAL)
     elif node.getAttribute('lcdColor').lower() == 'violet':
         lcd.backlight(lcd.VIOLET)
-    elif node.getAttribute('lcdColor').lower() == 'white':
-        lcd.backlight(lcd.ON)
-    if node.getAttribute('lcdBacklight').lower() == 'on':
-        lcd.backlight(lcd.ON)
-    elif node.getAttribute('lcdBacklight').lower() == 'off':
-        lcd.backlight(lcd.OFF)
 
 def ProcessNode(currentNode, currentItem):
     children = currentNode.childNodes
@@ -424,13 +410,12 @@ class Display:
             print('do',command)
         if command == 'u':
             self.up()
-        elif command == 'd':
-            self.down()
-        elif command == 'r':
-            self.right()
         elif command == 'l':
             self.left()
+        elif command == 'd':
+            self.down()
         elif command == 's':
+#            self.right()
             self.select()
     def up(self):
         if self.curSelectedItem == 0:
@@ -483,10 +468,20 @@ class Display:
     def select(self):
         if DEBUG:
             print('check widget')
-        if isinstance(self.curFolder.items[self.curSelectedItem], Widget):
+        if isinstance(self.curFolder.items[self.curSelectedItem], Folder):
+            self.curFolder = self.curFolder.items[self.curSelectedItem]
+            self.curTopItem = 0
+            self.curSelectedItem = 0
+        elif isinstance(self.curFolder.items[self.curSelectedItem], Widget):
             if DEBUG:
                 print('eval', self.curFolder.items[self.curSelectedItem].function)
             eval(self.curFolder.items[self.curSelectedItem].function+'()')
+        elif isinstance(self.curFolder.items[self.curSelectedItem], CommandToRun):
+            self.curFolder.items[self.curSelectedItem].Run()
+#        if isinstance(self.curFolder.items[self.curSelectedItem], Widget):
+#            if DEBUG:
+#                print('eval', self.curFolder.items[self.curSelectedItem].function)
+#            eval(self.curFolder.items[self.curSelectedItem].function+'()')
 
 # now start things up
 uiItems = Folder('root','')
@@ -503,28 +498,33 @@ display.display()
 if DEBUG:
 	print('start while')
 
-while 1:
-	if (lcd.buttonPressed(lcd.LEFT)):
-		display.update('l')
-		display.display()
-		sleep(0.25)
+GPIO.setmode(GPIO.BCM)
 
-	if (lcd.buttonPressed(lcd.UP)):
+GPIO.setup(OK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(DN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(UP, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+ok = GPIO.input(OK)
+dn = GPIO.input(DN)
+up = GPIO.input(UP)
+
+while 1:
+
+        ok = GPIO.input(OK)
+        dn = GPIO.input(DN)
+        up = GPIO.input(UP)
+
+	if up == False:
 		display.update('u')
 		display.display()
 		sleep(0.25)
 
-	if (lcd.buttonPressed(lcd.DOWN)):
+	if dn == False:
 		display.update('d')
 		display.display()
 		sleep(0.25)
 
-	if (lcd.buttonPressed(lcd.RIGHT)):
-		display.update('r')
-		display.display()
-		sleep(0.25)
-
-	if (lcd.buttonPressed(lcd.SELECT)):
+	if ok == False:
 		display.update('s')
 		display.display()
 		sleep(0.25)
