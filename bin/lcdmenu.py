@@ -338,6 +338,22 @@ class Display:
 				elif isinstance(self.curFolder.items[self.curSelectedItem], CommandToRun):
 						self.curFolder.items[self.curSelectedItem].Run()
 
+
+GPIO.setmode(GPIO.BCM)
+
+GPIO.setup(OK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(DN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(UP, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+# relays
+GPIO.setup(SpaRelay, GPIO.OUT, initial=GPIO.HIGH)
+
+ok = GPIO.input(OK)
+dn = GPIO.input(DN)
+up = GPIO.input(UP)
+
+ShowDashboard()
+
 # now start things up
 uiItems = Folder('root','')
 
@@ -352,19 +368,6 @@ display.display()
 
 if DEBUG:
 	print('start while')
-
-GPIO.setmode(GPIO.BCM)
-
-GPIO.setup(OK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(DN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(UP, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-# relays
-GPIO.setup(SpaRelay, GPIO.OUT, initial=GPIO.HIGH)
-
-ok = GPIO.input(OK)
-dn = GPIO.input(DN)
-up = GPIO.input(UP)
 
 while 1:
 
