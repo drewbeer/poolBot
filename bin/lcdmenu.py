@@ -60,6 +60,7 @@ GPIO.setup(LightRelay, GPIO.OUT, initial=GPIO.HIGH)
 def DoQuit():
 		lcd.clear()
 		lcd.message('Are you sure?\nPress Sel for Y')
+		sleep(0.25)
 		while 1:
 				if not (GPIO.input(UP)):
 						break
@@ -72,6 +73,7 @@ def DoQuit():
 def DoShutdown():
 		lcd.clear()
 		lcd.message('Are you sure?\nPress Sel for Y')
+		sleep(0.25)
 		while 1:
 				if not (GPIO.input(UP)):
 						break
@@ -84,6 +86,7 @@ def DoShutdown():
 def DoReboot():
 		lcd.clear()
 		lcd.message('Are you sure?\nPress Sel for Y')
+		sleep(0.25)
 		while 1:
 				if not (GPIO.input(UP)):
 						break
@@ -97,6 +100,7 @@ def ShowDateTime():
 		if DEBUG:
 				print('in ShowDateTime')
 		lcd.clear()
+		sleep(0.25)
 		while not (GPIO.input(OK)):
 				sleep(0.25)
 				lcd.home()
