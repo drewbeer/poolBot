@@ -160,42 +160,14 @@ def PumpSpaToggle():
 				lcd.message('Turning jets %s' % spaToggleMsg)
 				GPIO.output(SpaRelay, spaToggleVal)
 				sleep(1.5)
-			sleep(0.25)
+		sleep(0.25)
 
 # pump timer
 # Spa controls
 def PumpSpaTimer():
-	sleep(0.25)
-	while 1:
-		spaJetStatus = GPIO.input(SpaRelay)
-		# if the jets are off
-		if spaJetStatus:
-			if DEBUG:
-				print('jets off')
-			spaJetsMsg = "off"
-			spaToggleVal = 0
-			spaToggleMsg = "on"
-		# if the jets are already on
-		if not spaJetStatus:
-			if DEBUG:
-				print('jets on')
-			spaJetsMsg = "on"
-			spaToggleVal = 1
-			spaToggleMsg = "off"
+	if DEBUG:
+			print('in PumpSpaTimer')
 
-			lcd.clear()
-			lcd.message('Spa Booster\nStatus:	%s ' % spaJetsMsg)
-			if not GPIO.input(UP) or not GPIO.input(DN):
-				break
-			if not GPIO.input(OK):
-				lcd.clear()
-				lcd.message('Turning jets %s' % spaToggleMsg)
-				GPIO.output(SpaRelay, spaToggleVal)
-				sleep(1.5)
-			sleep(0.25)
-
-
-## functions and classes
 
 def goBack():
 		if DEBUG:
