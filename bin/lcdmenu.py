@@ -342,7 +342,13 @@ display.display()
 if DEBUG:
 	print('start while')
 
+timeout = 1000000
+dashTime = 0
 while 1:
+	dashTime += 1
+	if dashTime > timeout:
+		ShowDashboard()
+		dashTime = 0
 
 	ok = GPIO.input(OK)
 	dn = GPIO.input(DN)
@@ -351,14 +357,17 @@ while 1:
 	if not up:
 		display.update('u')
 		display.display()
+		dashTime = 0
 		sleep(0.25)
 
 	if not dn:
 		display.update('d')
 		display.display()
+		dashTime = 0
 		sleep(0.25)
 
 	if not ok:
 		display.update('s')
 		display.display()
+		dashTime = 0
 		sleep(0.25)
