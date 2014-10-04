@@ -1,10 +1,10 @@
 #!/usr/bin/python
 #
-# Created by Alan Aufderheide, February 2013
+# basicaly created by DrewBeer, and licensed as Free as in Beer.
+# this is the first time i have ever written python 10-3-2014
 #
-# This provides a menu driven application using the LCD Plates
-# from Adafruit Electronics.
-
+# code used from Alan Aufderheide - https://github.com/aufder/RaspberryPiLcdMenu
+#
 import commands
 import os
 import RPi.GPIO as GPIO
@@ -15,22 +15,34 @@ from Adafruit_CharLCD import Adafruit_CharLCD
 from subprocess import *
 from ListSelector import ListSelector
 
+# nav tree
 configfile = 'lcdmenu.xml'
+
 # set DEBUG=1 for print debug statements
 DEBUG = 1
+
+# LCD settings
 DISPLAY_ROWS = 2
 DISPLAY_COLS = 16
+lcd = Adafruit_CharLCD()
+lcd.begin(DISPLAY_COLS, DISPLAY_ROWS)
 
+# GPIO SETTINGS
 # # Define GPIO inputs and outputs
-# MODE
 E_PULSE = 0.00005
 E_DELAY = 0.00005
 wait = 0.1
+
+GPIO.setmode(GPIO.BCM)
 
 # BUTTONS
 UP = 13
 OK = 27
 DN = 26
+
+GPIO.setup(OK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(DN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(UP, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # RELAYS
 SpaRelay = 16
@@ -38,10 +50,10 @@ SaltRelay = 18
 HeaterRelay = 19
 LightRelay = 20
 
-# set busnum param to the correct value for your pi
-lcd = Adafruit_CharLCD()
-
-lcd.begin(DISPLAY_COLS, DISPLAY_ROWS)
+GPIO.setup(SpaRelay, GPIO.OUT, initial=GPIO.HIGH)
+GPIO.setup(SaltRelay, GPIO.OUT, initial=GPIO.HIGH)
+GPIO.setup(HeaterRelay, GPIO.OUT, initial=GPIO.HIGH)
+GPIO.setup(LightRelay, GPIO.OUT, initial=GPIO.HIGH)
 
 # commands
 def DoQuit():
@@ -339,18 +351,7 @@ class Display:
 						self.curFolder.items[self.curSelectedItem].Run()
 
 
-GPIO.setmode(GPIO.BCM)
-
-GPIO.setup(OK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(DN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(UP, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-# relays
-GPIO.setup(SpaRelay, GPIO.OUT, initial=GPIO.HIGH)
-
-ok = GPIO.input(OK)
-dn = GPIO.input(DN)
-up = GPIO.input(UP)
+#### START OF MAIN LOOP ######
 
 ShowDashboard()
 
@@ -375,17 +376,17 @@ while 1:
 	dn = GPIO.input(DN)
 	up = GPIO.input(UP)
 
-	if up == False:
+	if not up:
 		display.update('u')
 		display.display()
 		sleep(0.25)
 
-	if dn == False:
+	if not dn:
 		display.update('d')
 		display.display()
 		sleep(0.25)
 
-	if ok == False:
+	if not ok:
 		display.update('s')
 		display.display()
 		sleep(0.25)
