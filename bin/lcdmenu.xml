@@ -1,5 +1,4 @@
 <application>
-  <settings lcdColor="White" lcdBackground="On" />
   <folder text="Modes -&gt;">
     <widget text="Auto" function="ModeAuto" />
     <widget text="Party 88" function="ModeParty88" />
