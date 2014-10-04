@@ -7,6 +7,7 @@
 #
 import commands
 import os
+import threading
 import RPi.GPIO as GPIO
 from string import split
 from time import sleep, strftime, localtime
@@ -60,9 +61,9 @@ def DoQuit():
 		lcd.clear()
 		lcd.message('Are you sure?\nPress Sel for Y')
 		while 1:
-				if lcd.buttonPressed(lcd.LEFT):
+				if not (GPIO.input(UP)):
 						break
-				if lcd.buttonPressed(lcd.SELECT):
+				if not (GPIO.input(OK)):
 						lcd.clear()
 						quit()
 				sleep(0.25)
@@ -72,9 +73,9 @@ def DoShutdown():
 		lcd.clear()
 		lcd.message('Are you sure?\nPress Sel for Y')
 		while 1:
-				if lcd.buttonPressed(lcd.LEFT):
+				if not (GPIO.input(UP)):
 						break
-				if lcd.buttonPressed(lcd.SELECT):
+				if not (GPIO.input(OK)):
 						lcd.clear()
 						commands.getoutput("sudo shutdown -h now")
 						quit()
@@ -84,9 +85,9 @@ def DoReboot():
 		lcd.clear()
 		lcd.message('Are you sure?\nPress Sel for Y')
 		while 1:
-				if lcd.buttonPressed(lcd.LEFT):
+				if not (GPIO.input(UP)):
 						break
-				if lcd.buttonPressed(lcd.SELECT):
+				if not (GPIO.input(OK)):
 						lcd.clear()
 						commands.getoutput("sudo reboot")
 						quit()
@@ -125,8 +126,7 @@ def ShowDashboard():
 		lcd.clear()
 		while 1:
 				sleep(0.25)
-				lcd.clear()
-				lcd.message('mode:auto pump:on\ntemp:78 salt:0')
+				lcd.message('mode:auto pump:on\ntemp:78 salt:00')
 				if not GPIO.input(UP) or not GPIO.input(DN) or not GPIO.input(OK):
 					break
 
@@ -345,6 +345,9 @@ if DEBUG:
 timeout = 1000000
 dashTime = 0
 while 1:
+
+	# this creates a timeout so it reverts
+	# to the dashboard after like a minute
 	dashTime += 1
 	if dashTime > timeout:
 		ShowDashboard()

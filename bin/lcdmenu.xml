@@ -21,7 +21,7 @@
     <widget text="&lt;- Back" function="goBack" />
   </folder>
   <folder text="Water Flow -&gt;">
-    <folder text="Input">
+    <folder text="Input -&gt;">
       <widget text="Auto" function="ValvesInputAuto" />
       <widget text="Drains" function="ValvesInputDrains" />
       <widget text="Skimmer" function="ValvesInputSkimmer" />
