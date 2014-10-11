@@ -63,7 +63,7 @@ GPIO.setup(LightRelay, GPIO.OUT, initial=GPIO.HIGH)
 # functions
 def uInput(key):
 
-	gpioData = GPIO.Input(key)
+	gpioData = GPIO.input(key)
 	keyboard = stdscr.getch()
 
 	if key = "UP"
@@ -78,6 +78,7 @@ def uInput(key):
 		if gpioData or keyboard = 261
 			return True
 
+	return gpioData
 
 # commands
 def DoQuit():
@@ -386,15 +387,8 @@ def main(stdscr):
 			dashTime = 0
 
 		ok = uInput(OK)
-		dn = uInput(DN)x
+		dn = uInput(DN)
 		up = uInput(UP)
-
-		# debug term keys
-		c = stdscr.getch()
-		if c != -1:
-				# print numeric value
-				stdscr.addstr(str(c))
-
 
 		if not up:
 			display.update('u')
