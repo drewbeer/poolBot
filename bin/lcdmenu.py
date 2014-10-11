@@ -66,16 +66,16 @@ def uInput(key):
 	gpioData = GPIO.input(key)
 	keyboard = stdscr.getch()
 
-	if key = "UP"
-		if gpioData or keyboard = 259
+	if key == "UP"
+		if gpioData or keyboard == 259
 			return True
 
-	if key = "DN"
-		if gpioData or keyboard = 258
+	if key == "DN"
+		if gpioData or keyboard == 258
 			return True
 
-	if key = "OK"
-		if gpioData or keyboard = 261
+	if key == "OK"
+		if gpioData or keyboard == 261
 			return True
 
 	return gpioData
