@@ -23,7 +23,7 @@ configfile = 'lcdmenu.xml'
 
 # set DEBUG=1 for print debug statements
 DEBUG = 1
-stdscr.nodelay(1)
+stdscr = 0
 
 # LCD settings
 DISPLAY_ROWS = 2
@@ -357,6 +357,8 @@ class Display:
 
 def main(stdscr):
 #### START OF MAIN LOOP ######
+
+  stdscr.nodelay(1)
 
 	ShowDashboard()
 
