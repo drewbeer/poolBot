@@ -125,7 +125,7 @@ def DoReboot():
 
 def ShowDateTime():
 		if DEBUG:
-				print('in ShowDateTime')
+				stdscr.addstr('in ShowDateTime')
 		lcd.clear()
 		sleep(0.25)
 		while not (uInput(OK)):
@@ -136,7 +136,7 @@ def ShowDateTime():
 
 def SetLocation():
 		if DEBUG:
-				print('in SetLocation')
+				stdscr.addstr('in SetLocation')
 		global lcd
 		list = []
 		# coordinates usable by ephem library, lat, lon, elevation (m)
@@ -152,8 +152,9 @@ def SetLocation():
 
 ## dashboard
 def ShowDashboard():
+
 		if DEBUG:
-				print('in ShowDashbaord')
+				stdscr.addstr('in ShowDashbaord')
 		lcd.clear()
 		while 1:
 				sleep(0.25)
@@ -171,14 +172,14 @@ def PumpSpaToggle():
 		# if the jets are off
 		if spaJetStatus:
 			if DEBUG:
-				print('jets off')
+				stdscr.addstr('jets off')
 			spaJetsMsg = "off"
 			spaToggleVal = 0
 			spaToggleMsg = "on"
 		# if the jets are already on
 		if not spaJetStatus:
 			if DEBUG:
-				print('jets on')
+				stdscr.addstr('jets on')
 			spaJetsMsg = "on"
 		 	spaToggleVal = 1
 		 	spaToggleMsg = "off"
@@ -198,12 +199,12 @@ def PumpSpaToggle():
 # Spa controls
 def PumpSpaTimer():
 	if DEBUG:
-			print('in PumpSpaTimer')
+			stdscr.addstr('in PumpSpaTimer')
 
 
 def goBack():
 		if DEBUG:
-				print('in goBack')
+				stdscr.addstr('in goBack')
 		display.update('l')
 		display.display()
 
@@ -266,7 +267,7 @@ class Display:
 				if self.curTopItem < 0:
 						self.curTopItem = 0
 				if DEBUG:
-						print('------------------')
+						stdscr.addstr('------------------')
 				str = ''
 				for row in range(self.curTopItem, self.curTopItem+DISPLAY_ROWS):
 						if row > self.curTopItem:
@@ -278,7 +279,7 @@ class Display:
 												for row in range(len(cmd), 16):
 														cmd += ' '
 										if DEBUG:
-												print('|'+cmd+'|')
+												stdscr.addstr('|'+cmd+'|')
 										str += cmd
 								else:
 										cmd = ' '+self.curFolder.items[row].text
@@ -286,16 +287,16 @@ class Display:
 												for row in range(len(cmd), 16):
 														cmd += ' '
 										if DEBUG:
-												print('|'+cmd+'|')
+												stdscr.addstr('|'+cmd+'|')
 										str += cmd
 				if DEBUG:
-						print('------------------')
+						stdscr.addstr('------------------')
 				lcd.home()
 				lcd.message(str)
 
 		def update(self, command):
 				if DEBUG:
-						print('do',command)
+						stdscr.addstr('do',command)
 				if command == 'u':
 						self.up()
 				elif command == 'l':
@@ -328,7 +329,7 @@ class Display:
 						for item in self.curFolder.parent.items:
 								if self.curFolder == item:
 										if DEBUG:
-												print('foundit')
+												stdscr.addstr('foundit')
 										index = itemno
 								else:
 										itemno += 1
@@ -342,14 +343,14 @@ class Display:
 								self.curSelectedItem = 0
 		def select(self):
 				if DEBUG:
-						print('check widget')
+						stdscr.addstr('check widget')
 				if isinstance(self.curFolder.items[self.curSelectedItem], Folder):
 						self.curFolder = self.curFolder.items[self.curSelectedItem]
 						self.curTopItem = 0
 						self.curSelectedItem = 0
 				elif isinstance(self.curFolder.items[self.curSelectedItem], Widget):
 						if DEBUG:
-								print('eval', self.curFolder.items[self.curSelectedItem].function)
+								stdscr.addstr('eval', self.curFolder.items[self.curSelectedItem].function)
 						eval(self.curFolder.items[self.curSelectedItem].function+'()')
 				elif isinstance(self.curFolder.items[self.curSelectedItem], CommandToRun):
 						self.curFolder.items[self.curSelectedItem].Run()
@@ -372,7 +373,7 @@ def main(stdscr):
 	display.display()
 
 	if DEBUG:
-		print('start while')
+		stdscr.addstr('start while')
 
 	timeout = 1000000
 	dashTime = 0
