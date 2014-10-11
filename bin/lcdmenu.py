@@ -7,6 +7,7 @@
 #
 import commands
 import os
+import curses
 import threading
 import RPi.GPIO as GPIO
 from string import split
@@ -16,11 +17,13 @@ from Adafruit_CharLCD import Adafruit_CharLCD
 from subprocess import *
 from ListSelector import ListSelector
 
+
 # nav tree
 configfile = 'lcdmenu.xml'
 
 # set DEBUG=1 for print debug statements
 DEBUG = 1
+stdscr.nodelay(1)
 
 # LCD settings
 DISPLAY_ROWS = 2
@@ -56,15 +59,35 @@ GPIO.setup(SaltRelay, GPIO.OUT, initial=GPIO.HIGH)
 GPIO.setup(HeaterRelay, GPIO.OUT, initial=GPIO.HIGH)
 GPIO.setup(LightRelay, GPIO.OUT, initial=GPIO.HIGH)
 
+
+# functions
+def uInput(key):
+
+	gpioData = GPIO.Input(key)
+	keyboard = stdscr.getch()
+
+	if key = "UP"
+		if gpioData or keyboard = 259
+			return True
+
+	if key = "DN"
+		if gpioData or keyboard = 258
+			return True
+
+	if key = "OK"
+		if gpioData or keyboard = 261
+			return True
+
+
 # commands
 def DoQuit():
 		lcd.clear()
 		lcd.message('Are you sure?\nPress Sel for Y')
 		sleep(0.25)
 		while 1:
-				if not (GPIO.input(UP)):
+				if not (uInput(UP)):
 						break
-				if not (GPIO.input(OK)):
+				if not (uInput(OK)):
 						lcd.clear()
 						lcd.message('goodbye dave')
 						quit()
@@ -76,9 +99,9 @@ def DoShutdown():
 		lcd.message('Are you sure?\nPress Sel for Y')
 		sleep(0.25)
 		while 1:
-				if not (GPIO.input(UP)):
+				if not (uInput(UP)):
 						break
-				if not (GPIO.input(OK)):
+				if not (uInput(OK)):
 						lcd.clear()
 						lcd.message('shutting down')
 						commands.getoutput("shutdown -h now")
@@ -90,9 +113,9 @@ def DoReboot():
 		lcd.message('Are you sure?\nPress Sel for Y')
 		sleep(0.25)
 		while 1:
-				if not (GPIO.input(UP)):
+				if not (uInput(UP)):
 						break
-				if not (GPIO.input(OK)):
+				if not (uInput(OK)):
 						lcd.clear()
 						lcd.message('rebooting')
 						commands.getoutput("reboot")
@@ -104,7 +127,7 @@ def ShowDateTime():
 				print('in ShowDateTime')
 		lcd.clear()
 		sleep(0.25)
-		while not (GPIO.input(OK)):
+		while not (uInput(OK)):
 				sleep(0.25)
 				lcd.home()
 				lcd.message(strftime('%a %b %d %Y\n%I:%M:%S %p', localtime()))
@@ -134,7 +157,8 @@ def ShowDashboard():
 		while 1:
 				sleep(0.25)
 				lcd.message('mode:auto pump:on\ntemp:78 salt:00')
-				if not GPIO.input(UP) or not GPIO.input(DN) or not GPIO.input(OK):
+
+				if not uInput(UP) or not uInput(DN) or not uInput(OK):
 					break
 
 ## Spa controls
@@ -142,7 +166,7 @@ def ShowDashboard():
 def PumpSpaToggle():
 	sleep(0.25)
 	while 1:
-		spaJetStatus = GPIO.input(SpaRelay)
+		spaJetStatus = uInput(SpaRelay)
 		# if the jets are off
 		if spaJetStatus:
 			if DEBUG:
@@ -160,9 +184,9 @@ def PumpSpaToggle():
 
 		lcd.clear()
 		lcd.message('Spa Booster\nStatus: %s ' % spaJetsMsg)
-		if not GPIO.input(UP) or not GPIO.input(DN):
+		if not uInput(UP) or not uInput(DN):
 			break
-		if not GPIO.input(OK):
+		if not uInput(OK):
 			lcd.clear()
 			lcd.message('Turning jets %s' % spaToggleMsg)
 			GPIO.output(SpaRelay, spaToggleVal)
@@ -329,55 +353,66 @@ class Display:
 				elif isinstance(self.curFolder.items[self.curSelectedItem], CommandToRun):
 						self.curFolder.items[self.curSelectedItem].Run()
 
-
+def main(stdscr):
 #### START OF MAIN LOOP ######
 
-ShowDashboard()
+	ShowDashboard()
 
-# now start things up
-uiItems = Folder('root','')
+	# now start things up
+	uiItems = Folder('root','')
 
-dom = parse(configfile) # parse an XML file by name
+	dom = parse(configfile) # parse an XML file by name
 
-top = dom.documentElement
+	top = dom.documentElement
 
-ProcessNode(top, uiItems)
+	ProcessNode(top, uiItems)
 
-display = Display(uiItems)
-display.display()
+	display = Display(uiItems)
+	display.display()
 
-if DEBUG:
-	print('start while')
+	if DEBUG:
+		print('start while')
 
-timeout = 1000000
-dashTime = 0
-while 1:
+	timeout = 1000000
+	dashTime = 0
 
-	# this creates a timeout so it reverts
-	# to the dashboard after like a minute
-	dashTime += 1
-	if dashTime > timeout:
-		ShowDashboard()
-		dashTime = 0
+	while True:
 
-	ok = GPIO.input(OK)
-	dn = GPIO.input(DN)
-	up = GPIO.input(UP)
+		# this creates a timeout so it reverts
+		# to the dashboard after like a minute
+		dashTime += 1
+		if dashTime > timeout:
+			ShowDashboard()
+			dashTime = 0
 
-	if not up:
-		display.update('u')
-		display.display()
-		dashTime = 0
-		sleep(0.25)
+		ok = uInput(OK)
+		dn = uInput(DN)x
+		up = uInput(UP)
 
-	if not dn:
-		display.update('d')
-		display.display()
-		dashTime = 0
-		sleep(0.25)
+		# debug term keys
+		c = stdscr.getch()
+		if c != -1:
+				# print numeric value
+				stdscr.addstr(str(c))
 
-	if not ok:
-		display.update('s')
-		display.display()
-		dashTime = 0
-		sleep(0.25)
+
+		if not up:
+			display.update('u')
+			display.display()
+			dashTime = 0
+			sleep(0.25)
+
+		if not dn:
+			display.update('d')
+			display.display()
+			dashTime = 0
+			sleep(0.25)
+
+		if not ok:
+			display.update('s')
+			display.display()
+			dashTime = 0
+			sleep(0.25)
+
+if __name__ == '__main__':
+		curses.wrapper(main)
