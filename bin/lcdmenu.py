@@ -23,7 +23,6 @@ configfile = 'lcdmenu.xml'
 
 # set DEBUG=1 for print debug statements
 DEBUG = 1
-stdscr = 0
 
 # LCD settings
 DISPLAY_ROWS = 2
@@ -64,19 +63,25 @@ GPIO.setup(LightRelay, GPIO.OUT, initial=GPIO.HIGH)
 def uInput(key):
 
 	gpioData = GPIO.input(key)
-	keyboard = stdscr.getch()
+	keyboard = str(stdscr.getch())
 
-	if key == "UP":
-		if gpioData or keyboard == 259:
-			return True
+	if DEBUG:
+		if keyboard != "-1":
+			stdscr.addstr(keyboard)
+			stdscr.addstr("\n")
+			stdscr.addstr(key)
+			stdscr.addstr("\n")
+	if key == UP:
+		if gpioData or keyboard == "259":
+			return False
 
-	if key == "DN":
-		if gpioData or keyboard == 258:
-			return True
+	if key == DN:
+		if gpioData or keyboard == "258":
+			return False
 
-	if key == "OK":
-		if gpioData or keyboard == 261:
-			return True
+	if key == OK:
+		if gpioData or keyboard == "261":
+			return False
 
 	return gpioData
 
@@ -296,7 +301,7 @@ class Display:
 
 		def update(self, command):
 				if DEBUG:
-						stdscr.addstr('do',command)
+						stdscr.addstr(command)
 				if command == 'u':
 						self.up()
 				elif command == 'l':
@@ -355,10 +360,11 @@ class Display:
 				elif isinstance(self.curFolder.items[self.curSelectedItem], CommandToRun):
 						self.curFolder.items[self.curSelectedItem].Run()
 
+
 def main(stdscr):
 #### START OF MAIN LOOP ######
 
-  stdscr.nodelay(1)
+	stdscr.nodelay(1)
 
 	ShowDashboard()
 
@@ -411,5 +417,9 @@ def main(stdscr):
 			dashTime = 0
 			sleep(0.25)
 
+
+stdscr = curses.initscr()
+
+# go!
 if __name__ == '__main__':
 		curses.wrapper(main)
