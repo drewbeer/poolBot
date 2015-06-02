@@ -95,7 +95,6 @@ def DoQuit():
 						break
 				if not (uInput(OK)):
 						lcd.clear()
-						lcd.message('goodbye dave')
 						quit()
 				sleep(0.25)
 
@@ -109,8 +108,7 @@ def DoShutdown():
 						break
 				if not (uInput(OK)):
 						lcd.clear()
-						lcd.message('shutting down')
-						commands.getoutput("shutdown -h now")
+						commands.getoutput("sudo shutdown -h now")
 						quit()
 				sleep(0.25)
 
@@ -123,8 +121,7 @@ def DoReboot():
 						break
 				if not (uInput(OK)):
 						lcd.clear()
-						lcd.message('rebooting')
-						commands.getoutput("reboot")
+						commands.getoutput("sudo reboot")
 						quit()
 				sleep(0.25)
 
