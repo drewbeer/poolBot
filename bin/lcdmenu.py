@@ -7,7 +7,6 @@
 #
 import commands
 import os
-import curses
 import threading
 import RPi.GPIO as GPIO
 from string import split
@@ -16,7 +15,6 @@ from xml.dom.minidom import *
 from Adafruit_CharLCD import Adafruit_CharLCD
 from subprocess import *
 from ListSelector import ListSelector
-
 
 # nav tree
 configfile = 'lcdmenu.xml'
@@ -58,43 +56,17 @@ GPIO.setup(SaltRelay, GPIO.OUT, initial=GPIO.HIGH)
 GPIO.setup(HeaterRelay, GPIO.OUT, initial=GPIO.HIGH)
 GPIO.setup(LightRelay, GPIO.OUT, initial=GPIO.HIGH)
 
-
-# functions
-def uInput(key):
-
-	gpioData = GPIO.input(key)
-	keyboard = str(stdscr.getch())
-
-	if DEBUG:
-		if keyboard != "-1":
-			stdscr.addstr(keyboard)
-			stdscr.addstr("\n")
-			stdscr.addstr(key)
-			stdscr.addstr("\n")
-	if key == UP:
-		if gpioData or keyboard == "259":
-			return False
-
-	if key == DN:
-		if gpioData or keyboard == "258":
-			return False
-
-	if key == OK:
-		if gpioData or keyboard == "261":
-			return False
-
-	return gpioData
-
 # commands
 def DoQuit():
 		lcd.clear()
 		lcd.message('Are you sure?\nPress Sel for Y')
 		sleep(0.25)
 		while 1:
-				if not (uInput(UP)):
+				if not (GPIO.input(UP)):
 						break
-				if not (uInput(OK)):
+				if not (GPIO.input(OK)):
 						lcd.clear()
+						lcd.message('goodbye dave')
 						quit()
 				sleep(0.25)
 
@@ -104,11 +76,12 @@ def DoShutdown():
 		lcd.message('Are you sure?\nPress Sel for Y')
 		sleep(0.25)
 		while 1:
-				if not (uInput(UP)):
+				if not (GPIO.input(UP)):
 						break
-				if not (uInput(OK)):
+				if not (GPIO.input(OK)):
 						lcd.clear()
-						commands.getoutput("sudo shutdown -h now")
+						lcd.message('shutting down')
+						commands.getoutput("shutdown -h now")
 						quit()
 				sleep(0.25)
 
@@ -117,20 +90,21 @@ def DoReboot():
 		lcd.message('Are you sure?\nPress Sel for Y')
 		sleep(0.25)
 		while 1:
-				if not (uInput(UP)):
+				if not (GPIO.input(UP)):
 						break
-				if not (uInput(OK)):
+				if not (GPIO.input(OK)):
 						lcd.clear()
-						commands.getoutput("sudo reboot")
+						lcd.message('rebooting')
+						commands.getoutput("reboot")
 						quit()
 				sleep(0.25)
 
 def ShowDateTime():
 		if DEBUG:
-				stdscr.addstr('in ShowDateTime')
+				print('in ShowDateTime')
 		lcd.clear()
 		sleep(0.25)
-		while not (uInput(OK)):
+		while not (GPIO.input(OK)):
 				sleep(0.25)
 				lcd.home()
 				lcd.message(strftime('%a %b %d %Y\n%I:%M:%S %p', localtime()))
@@ -138,7 +112,7 @@ def ShowDateTime():
 
 def SetLocation():
 		if DEBUG:
-				stdscr.addstr('in SetLocation')
+				print('in SetLocation')
 		global lcd
 		list = []
 		# coordinates usable by ephem library, lat, lon, elevation (m)
@@ -154,15 +128,13 @@ def SetLocation():
 
 ## dashboard
 def ShowDashboard():
-
 		if DEBUG:
-				stdscr.addstr('in ShowDashbaord')
+				print('in ShowDashbaord')
 		lcd.clear()
 		while 1:
 				sleep(0.25)
 				lcd.message('mode:auto pump:on\ntemp:78 salt:00')
-
-				if not uInput(UP) or not uInput(DN) or not uInput(OK):
+				if not GPIO.input(UP) or not GPIO.input(DN) or not GPIO.input(OK):
 					break
 
 ## Spa controls
@@ -170,27 +142,27 @@ def ShowDashboard():
 def PumpSpaToggle():
 	sleep(0.25)
 	while 1:
-		spaJetStatus = uInput(SpaRelay)
+		spaJetStatus = GPIO.input(SpaRelay)
 		# if the jets are off
 		if spaJetStatus:
 			if DEBUG:
-				stdscr.addstr('jets off')
+				print('jets off')
 			spaJetsMsg = "off"
 			spaToggleVal = 0
 			spaToggleMsg = "on"
 		# if the jets are already on
 		if not spaJetStatus:
 			if DEBUG:
-				stdscr.addstr('jets on')
+				print('jets on')
 			spaJetsMsg = "on"
 		 	spaToggleVal = 1
 		 	spaToggleMsg = "off"
 
 		lcd.clear()
 		lcd.message('Spa Booster\nStatus: %s ' % spaJetsMsg)
-		if not uInput(UP) or not uInput(DN):
+		if not GPIO.input(UP) or not GPIO.input(DN):
 			break
-		if not uInput(OK):
+		if not GPIO.input(OK):
 			lcd.clear()
 			lcd.message('Turning jets %s' % spaToggleMsg)
 			GPIO.output(SpaRelay, spaToggleVal)
@@ -201,12 +173,12 @@ def PumpSpaToggle():
 # Spa controls
 def PumpSpaTimer():
 	if DEBUG:
-			stdscr.addstr('in PumpSpaTimer')
+			print('in PumpSpaTimer')
 
 
 def goBack():
 		if DEBUG:
-				stdscr.addstr('in goBack')
+				print('in goBack')
 		display.update('l')
 		display.display()
 
@@ -269,7 +241,7 @@ class Display:
 				if self.curTopItem < 0:
 						self.curTopItem = 0
 				if DEBUG:
-						stdscr.addstr('------------------')
+						print('------------------')
 				str = ''
 				for row in range(self.curTopItem, self.curTopItem+DISPLAY_ROWS):
 						if row > self.curTopItem:
@@ -281,7 +253,7 @@ class Display:
 												for row in range(len(cmd), 16):
 														cmd += ' '
 										if DEBUG:
-												stdscr.addstr('|'+cmd+'|')
+												print('|'+cmd+'|')
 										str += cmd
 								else:
 										cmd = ' '+self.curFolder.items[row].text
@@ -289,16 +261,16 @@ class Display:
 												for row in range(len(cmd), 16):
 														cmd += ' '
 										if DEBUG:
-												stdscr.addstr('|'+cmd+'|')
+												print('|'+cmd+'|')
 										str += cmd
 				if DEBUG:
-						stdscr.addstr('------------------')
+						print('------------------')
 				lcd.home()
 				lcd.message(str)
 
 		def update(self, command):
 				if DEBUG:
-						stdscr.addstr(command)
+						print('do',command)
 				if command == 'u':
 						self.up()
 				elif command == 'l':
@@ -331,7 +303,7 @@ class Display:
 						for item in self.curFolder.parent.items:
 								if self.curFolder == item:
 										if DEBUG:
-												stdscr.addstr('foundit')
+												print('foundit')
 										index = itemno
 								else:
 										itemno += 1
@@ -345,78 +317,67 @@ class Display:
 								self.curSelectedItem = 0
 		def select(self):
 				if DEBUG:
-						stdscr.addstr('check widget')
+						print('check widget')
 				if isinstance(self.curFolder.items[self.curSelectedItem], Folder):
 						self.curFolder = self.curFolder.items[self.curSelectedItem]
 						self.curTopItem = 0
 						self.curSelectedItem = 0
 				elif isinstance(self.curFolder.items[self.curSelectedItem], Widget):
 						if DEBUG:
-								stdscr.addstr('eval', self.curFolder.items[self.curSelectedItem].function)
+								print('eval', self.curFolder.items[self.curSelectedItem].function)
 						eval(self.curFolder.items[self.curSelectedItem].function+'()')
 				elif isinstance(self.curFolder.items[self.curSelectedItem], CommandToRun):
 						self.curFolder.items[self.curSelectedItem].Run()
 
 
-def main(stdscr):
 #### START OF MAIN LOOP ######
 
-	stdscr.nodelay(1)
+ShowDashboard()
 
-	ShowDashboard()
+# now start things up
+uiItems = Folder('root','')
 
-	# now start things up
-	uiItems = Folder('root','')
+dom = parse(configfile) # parse an XML file by name
 
-	dom = parse(configfile) # parse an XML file by name
+top = dom.documentElement
 
-	top = dom.documentElement
+ProcessNode(top, uiItems)
 
-	ProcessNode(top, uiItems)
+display = Display(uiItems)
+display.display()
 
-	display = Display(uiItems)
-	display.display()
+if DEBUG:
+	print('start while')
 
-	if DEBUG:
-		stdscr.addstr('start while')
+timeout = 1000000
+dashTime = 0
+while 1:
 
-	timeout = 1000000
-	dashTime = 0
+	# this creates a timeout so it reverts
+	# to the dashboard after like a minute
+	dashTime += 1
+	if dashTime > timeout:
+		ShowDashboard()
+		dashTime = 0
 
-	while True:
+	ok = GPIO.input(OK)
+	dn = GPIO.input(DN)
+	up = GPIO.input(UP)
 
-		# this creates a timeout so it reverts
-		# to the dashboard after like a minute
-		dashTime += 1
-		if dashTime > timeout:
-			ShowDashboard()
-			dashTime = 0
+	if not up:
+		display.update('u')
+		display.display()
+		dashTime = 0
+		sleep(0.25)
 
-		ok = uInput(OK)
-		dn = uInput(DN)
-		up = uInput(UP)
+	if not dn:
+		display.update('d')
+		display.display()
+		dashTime = 0
+		sleep(0.25)
 
-		if not up:
-			display.update('u')
-			display.display()
-			dashTime = 0
-			sleep(0.25)
-
-		if not dn:
-			display.update('d')
-			display.display()
-			dashTime = 0
-			sleep(0.25)
-
-		if not ok:
-			display.update('s')
-			display.display()
-			dashTime = 0
-			sleep(0.25)
-
-
-stdscr = curses.initscr()
-
-# go!
-if __name__ == '__main__':
-		curses.wrapper(main)
+	if not ok:
+		display.update('s')
+		display.display()
+		dashTime = 0
+		sleep(0.25)
