@@ -7,7 +7,9 @@
 #
 import commands
 import os
-import threading
+import time
+from threading import Thread
+import urllib, json
 import RPi.GPIO as GPIO
 from string import split
 from time import sleep, strftime, localtime
@@ -17,7 +19,9 @@ from subprocess import *
 from ListSelector import ListSelector
 
 # nav tree
-configfile = 'lcdmenu.xml'
+configfile = '../etc/menuTree.xml'
+
+pumpURL = "http://10.42.2.19:3000/pump"
 
 # set DEBUG=1 for print debug statements
 DEBUG = 1
@@ -37,24 +41,29 @@ wait = 0.1
 GPIO.setmode(GPIO.BCM)
 
 # BUTTONS
-UP = 13
-OK = 27
+UP = 27
+OK = 13
 DN = 26
+# BK = 6
 
 GPIO.setup(OK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(DN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(UP, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # RELAYS
-SpaRelay = 16
-SaltRelay = 18
-HeaterRelay = 19
-LightRelay = 20
+ValveOne = 5
+ValveTwo = 4
+SaltRelay = 16
+HeaterRelay = 12
+SpaRelay = 18
+# LightRelay = 20
 
-GPIO.setup(SpaRelay, GPIO.OUT, initial=GPIO.HIGH)
-GPIO.setup(SaltRelay, GPIO.OUT, initial=GPIO.HIGH)
-GPIO.setup(HeaterRelay, GPIO.OUT, initial=GPIO.HIGH)
-GPIO.setup(LightRelay, GPIO.OUT, initial=GPIO.HIGH)
+GPIO.setup(ValveOne, GPIO.OUT, initial=GPIO.LOW)
+GPIO.setup(ValveTwo, GPIO.OUT, initial=GPIO.LOW)
+GPIO.setup(SaltRelay, GPIO.OUT, initial=GPIO.LOW)
+GPIO.setup(HeaterRelay, GPIO.OUT, initial=GPIO.LOW)
+GPIO.setup(SpaRelay, GPIO.OUT, initial=GPIO.LOW)
+# GPIO.setup(LightRelay, GPIO.OUT, initial=GPIO.LOW)
 
 # commands
 def DoQuit():
@@ -124,6 +133,11 @@ def SetLocation():
 		if (item >= 0):
 				chosen = list[item]
 
+def PumpStatus(arg):
+    response = urllib.urlopen(pumpUrl)
+    data = json.loads(response.read())
+    # we should do something with the data, parse it or whatever
+
 ### main stuff
 
 ## dashboard
@@ -146,17 +160,17 @@ def PumpSpaToggle():
 		# if the jets are off
 		if spaJetStatus:
 			if DEBUG:
-				print('jets off')
-			spaJetsMsg = "off"
+				print('jets on')
+			spaJetsMsg = "on"
 			spaToggleVal = 0
-			spaToggleMsg = "on"
+			spaToggleMsg = "off"
 		# if the jets are already on
 		if not spaJetStatus:
 			if DEBUG:
-				print('jets on')
-			spaJetsMsg = "on"
+				print('jets off')
+			spaJetsMsg = "off"
 		 	spaToggleVal = 1
-		 	spaToggleMsg = "off"
+		 	spaToggleMsg = "on"
 
 		lcd.clear()
 		lcd.message('Spa Booster\nStatus: %s ' % spaJetsMsg)
@@ -181,6 +195,7 @@ def goBack():
 				print('in goBack')
 		display.update('l')
 		display.display()
+
 
 class CommandToRun:
 		def __init__(self, myName, theCommand):
@@ -329,7 +344,6 @@ class Display:
 				elif isinstance(self.curFolder.items[self.curSelectedItem], CommandToRun):
 						self.curFolder.items[self.curSelectedItem].Run()
 
-
 #### START OF MAIN LOOP ######
 
 ShowDashboard()
@@ -343,41 +357,42 @@ top = dom.documentElement
 
 ProcessNode(top, uiItems)
 
+global display
 display = Display(uiItems)
 display.display()
 
 if DEBUG:
-	print('start while')
+    print('start dashboard loop')
 
 timeout = 1000000
 dashTime = 0
 while 1:
 
-	# this creates a timeout so it reverts
-	# to the dashboard after like a minute
-	dashTime += 1
-	if dashTime > timeout:
-		ShowDashboard()
-		dashTime = 0
+    # this creates a timeout so it reverts
+    # to the dashboard after like a minute
+    dashTime += 1
+    if dashTime > timeout:
+        ShowDashboard()
+        dashTime = 0
 
-	ok = GPIO.input(OK)
-	dn = GPIO.input(DN)
-	up = GPIO.input(UP)
+    ok = GPIO.input(OK)
+    dn = GPIO.input(DN)
+    up = GPIO.input(UP)
 
-	if not up:
-		display.update('u')
-		display.display()
-		dashTime = 0
-		sleep(0.25)
+    if not up:
+        display.update('u')
+        display.display()
+        dashTime = 0
+        sleep(0.25)
 
-	if not dn:
-		display.update('d')
-		display.display()
-		dashTime = 0
-		sleep(0.25)
+    if not dn:
+        display.update('d')
+        display.display()
+        dashTime = 0
+        sleep(0.25)
 
-	if not ok:
-		display.update('s')
-		display.display()
-		dashTime = 0
-		sleep(0.25)
+    if not ok:
+        display.update('s')
+        display.display()
+        dashTime = 0
+        sleep(0.25)
