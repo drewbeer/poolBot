@@ -1,0 +1,20 @@
+#! /bin/sh
+# /etc/init.d/aquaBot
+
+case "$1" in
+  start)
+    echo "Starting aquaBot"
+    cd /opt/aquaBot/
+    sudo /usr/bin/python bin/aquaBot.py &
+  ;;
+  stop)
+    echo "Stopping aquaBot"
+    killall python
+    ;;
+  *)
+    echo "Usage: /etc/init.d/aquaBot {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0
