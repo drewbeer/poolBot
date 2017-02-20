@@ -101,7 +101,7 @@ helper toggleRelay => sub {
   if ($value) {
     $bcm->gpio_set( $relay );
   } else {
-    $bcm->gpio_clr( $replay );
+    $bcm->gpio_clr( $relay );
   }
   my $relayStatus = $bcm->gpio_lev( $relay );
   return $relayStatus;
