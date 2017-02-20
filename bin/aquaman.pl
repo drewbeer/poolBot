@@ -187,7 +187,7 @@ helper timeStamp => sub {
 	$timestamp->{'nowMinute'} = sprintf ( "%02d", $min);
 
 	return $timestamp;
-}
+};
 
 # # Always check auth token!  Here we validate that every API request
 # # has a valid token
