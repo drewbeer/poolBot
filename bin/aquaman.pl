@@ -13,6 +13,7 @@ use Log::Log4perl;
 use Data::Dumper;
 use HiPi::BCM2835;
 use HiPi::Utils;
+use Schedule::Cron;
 
 my $pumpUrl = "http://10.42.2.19:3000";
 
@@ -24,32 +25,48 @@ my $log = Log::Log4perl->get_logger("aquaman");
 
 $log->info("Starting AquaMan");
 
+
+# we should load up the cron for any schedules in memory and start them before the api kicks off
+
+
+
 # listen on code
 app->config(aquaman => {listen => ['http://*:3000']});
 
 # Global handle for db connections
 my $dbh = "";
 my $bcm = "";
+my $cron = "";
 
-# Helpers for the db
+## Helpers
+# Create db connection if needed
+helper db => sub {
+    if($dbh){
+        return $dbh;
+    }else{
+        $dbh = DBI->connect('DBI:mysql:database=aquaman;host=localhost','root','') or die $DBI::errstr;
+        return $dbh;
+    }
+};
 
-# # Create db connection if needed
-# helper db => sub {
-#     if($dbh){
-#         return $dbh;
-#     }else{
-#         $dbh = DBI->connect('DBI:mysql:database=aquaman;host=localhost','root','') or die $DBI::errstr;
-#         return $dbh;
-#     }
-# };
-#
-# # Disconnect db connection
-# helper db_disconnect => sub {
-#     my $self = shift;
-#     $self->db->disconnect;
-#     $dbh = "";
-# };
+# Disconnect db connection
+helper db_disconnect => sub {
+    my $self = shift;
+    $self->db->disconnect;
+    $dbh = "";
+};
 
+# cron
+helper cron => sub {
+    if($cron){
+        return $cron;
+    }else{
+        $cron = new Schedule::Cron(\&dispatcher);
+        return $cron;
+    }
+};
+
+# GPIO stuff
 helper bcm => sub {
   my($bcmUser, $bcmGroup) = ('pi', 'pi');
   if ($bcm) {
@@ -61,23 +78,14 @@ helper bcm => sub {
   }
 };
 
-# my $pin = 18;
-# my $level = $bcm->gpio_lev( $pin );
-#
-# print "level is $level\n";
-#
-# # high
-# #$bcm->gpio_set( $pin );
-# # low
-# $bcm->gpio_clr( $pin );
-
-
-sub fetchUrl {
+# url fetcher
+helper fetchUrl => sub {
   my ($self, $url) = @_;
   my $response = LWP::Simple::get($url);
   return $response;
 };
 
+# pump status
 helper fetchPumpStatus => sub {
   my $self = shift;
   my $pumpStatus = ();
@@ -93,6 +101,27 @@ helper fetchPumpStatus => sub {
   return $pumpStatus;
 };
 
+# pump status
+helper setPumpRun => sub {
+  my ($self, $pumpID, $program, $duration) = @_;
+  # fetch the pump status and only one since thats all we have
+  my $pumpRunCMD = "$pumpUrl/pumpCommand/run/pump/$pumpID/program/$program/duration/$duration";
+  my $pumpResponseJSON = LWP::Simple::get($pumpRunCMD);
+  my $pumpResponse = JSON->new->utf8(1)->decode($pumpResponseJSON);
+  return $pumpResponse;
+};
+
+# pump status
+helper setPumpProgram => sub {
+  my ($self, $pumpID, $program, $rpm) = @_;
+  # fetch the pump status and only one since thats all we have
+  my $pumpProgramCMD = "$pumpUrl/pumpCommand/save/pump/$pumpID/program/$program/rpm/$rpm";
+  my $pumpResponseJSON = LWP::Simple::get($pumpProgramCMD);
+  my $pumpResponse = JSON->new->utf8(1)->decode($pumpResponseJSON);
+  return $pumpResponse;
+};
+
+# relay control
 helper toggleRelay => sub {
   my ($self, $relay, $value) = @_;
   if ($value > 1) {
@@ -107,6 +136,7 @@ helper toggleRelay => sub {
   return $relayStatus;
 };
 
+# relay status
 helper relayStatus => sub {
   my ($self, $relay) = @_;
   if (!$relay) {
@@ -115,6 +145,19 @@ helper relayStatus => sub {
   my $relayStatus = $self->bcm->gpio_lev( $relay );
   return $relayStatus;
 };
+
+# generate timestamp data
+helper timeStamp => sub {
+	my $self = shift;
+	# returns a timestamp for the file
+	my $timestamp = ();
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+	$timestamp->{'file'} = sprintf ( "%04d%02d%02d-%02d.%02d.%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
+	$timestamp->{'now'} = sprintf ( "%04d%02d%02d %02d:%02d:%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
+	$timestamp->{'nowMinute'} = sprintf ( "%02d", $min);
+
+	return $timestamp;
+}
 
 # # Always check auth token!  Here we validate that every API request
 # # has a valid token
@@ -143,15 +186,32 @@ helper relayStatus => sub {
 #     }
 # };
 
-
-## Blacklist API code ##
-
 # pump status
 get '/api/pump/status/:id' => sub {
     my $self  = shift;
     my $pumpID  = $self->stash('id');
     my $pumpStatus = $self->fetchPumpStatus($pumpID);
     return $self->render(json => {name => $pumpStatus->{$pumpID}->{'name'}, watts => $pumpStatus->{$pumpID}->{'watts'}, rpm => $pumpStatus->{$pumpID}->{'rpm'}, run => $pumpStatus->{$pumpID}->{'run'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program2rpm => $pumpStatus->{$pumpID}->{'program2rpm'}, program3rpm => $pumpStatus->{$pumpID}->{'program3rpm'}, program4rpm => $pumpStatus->{$pumpID}->{'program4rpm'},programRemaining => $pumpStatus->{$pumpID}->{'currentrunning'}->{'remainingduration'}, programRunning => $pumpStatus->{$pumpID}->{'currentrunning'}->{'value'}, programMode => $pumpStatus->{$pumpID}->{'currentrunning'}->{'mode'}});
+};
+
+# set the pump program.
+get '/api/pump/set/:id/:program/:rpm' => sub {
+    my $self  = shift;
+    my $pumpID  = $self->stash('id');
+    my $program  = $self->stash('program');
+    my $rpm  = $self->stash('rpm');
+    my $pumpResponse = $self->setPumpProgram($pumpID, $program, $rpm);
+    return $self->render(json => {pump => $pumpResponse->{'pump'}, program => $pumpResponse->{'program'}, rpm => $pumpResponse->{'speed'}});
+};
+
+# set the pump run.
+get '/api/pump/run/:id/:program/:duration' => sub {
+    my $self  = shift;
+    my $pumpID  = $self->stash('id');
+    my $program  = $self->stash('program');
+    my $duration  = $self->stash('duration');
+    my $pumpResponse = $self->setPumpRun($pumpID, $program, $duration);
+    return $self->render(json => {pump => $pumpResponse->{'pump'}, program => $pumpResponse->{'program'}, duration => $pumpResponse->{'duration'}});
 };
 
 # relay control
