@@ -15,7 +15,20 @@ use HiPi::BCM2835;
 use HiPi::Utils;
 use Schedule::Cron;
 
+my $relays = ();
 my $pumpUrl = "http://10.42.2.19:3000";
+
+# relay map
+# ValveOne = 5
+# ValveTwo = 4
+# SaltRelay = 16
+# HeaterRelay = 12
+# SpaRelay = 18
+$relays->{'valveIn'} = 5;
+$relays->{'ValveOut'} = 4;
+$relays->{'salt'} = 16;
+$relays->{'heater'} = 12;
+$relays->{'spa'} = 18;
 
 # log file setup
 Log::Log4perl->init("../etc/aquaman.log.conf");
@@ -101,11 +114,26 @@ helper fetchPumpStatus => sub {
   return $pumpStatus;
 };
 
-# pump status
+# pump run
 helper setPumpRun => sub {
   my ($self, $pumpID, $program, $duration) = @_;
   # fetch the pump status and only one since thats all we have
   my $pumpRunCMD = "$pumpUrl/pumpCommand/run/pump/$pumpID/program/$program/duration/$duration";
+  my $pumpResponseJSON = LWP::Simple::get($pumpRunCMD);
+  my $pumpResponse = JSON->new->utf8(1)->decode($pumpResponseJSON);
+  return $pumpResponse;
+};
+
+# pump power
+helper setPumpPower => sub {
+  my ($self, $pumpID, $value) = @_;
+  my $power = "";
+  if ($value) {
+    $power = 'on';
+  } else {
+    $power = 'off';
+  }
+  my $pumpRunCMD = "$pumpUrl/pumpCommand/$value/pump/$pumpID";
   my $pumpResponseJSON = LWP::Simple::get($pumpRunCMD);
   my $pumpResponse = JSON->new->utf8(1)->decode($pumpResponseJSON);
   return $pumpResponse;
@@ -127,22 +155,24 @@ helper toggleRelay => sub {
   if ($value > 1) {
     return 0;
   }
+  my $relayID = $relays->{$relay};
   if ($value) {
-    $self->bcm->gpio_set( $relay );
+    $self->bcm->gpio_set( $relayID );
   } else {
-    $self->bcm->gpio_clr( $relay );
+    $self->bcm->gpio_clr( $relayID );
   }
-  my $relayStatus = $self->bcm->gpio_lev( $relay );
+  my $relayStatus = $self->bcm->gpio_lev( $relayID );
   return $relayStatus;
 };
 
 # relay status
 helper relayStatus => sub {
   my ($self, $relay) = @_;
-  if (!$relay) {
+  my $relayID = $relays->{$relay};
+  if (!$relayID) {
     return 0;
   }
-  my $relayStatus = $self->bcm->gpio_lev( $relay );
+  my $relayStatus = $self->bcm->gpio_lev( $relayID );
   return $relayStatus;
 };
 
@@ -190,6 +220,9 @@ helper timeStamp => sub {
 get '/api/pump/status/:id' => sub {
     my $self  = shift;
     my $pumpID  = $self->stash('id');
+    if (!$pumpID) {
+      return $self->render(json => {error => "missing pump number"});
+    }
     my $pumpStatus = $self->fetchPumpStatus($pumpID);
     return $self->render(json => {name => $pumpStatus->{$pumpID}->{'name'}, watts => $pumpStatus->{$pumpID}->{'watts'}, rpm => $pumpStatus->{$pumpID}->{'rpm'}, run => $pumpStatus->{$pumpID}->{'run'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program2rpm => $pumpStatus->{$pumpID}->{'program2rpm'}, program3rpm => $pumpStatus->{$pumpID}->{'program3rpm'}, program4rpm => $pumpStatus->{$pumpID}->{'program4rpm'},programRemaining => $pumpStatus->{$pumpID}->{'currentrunning'}->{'remainingduration'}, programRunning => $pumpStatus->{$pumpID}->{'currentrunning'}->{'value'}, programMode => $pumpStatus->{$pumpID}->{'currentrunning'}->{'mode'}});
 };
@@ -200,18 +233,36 @@ get '/api/pump/set/:id/:program/:rpm' => sub {
     my $pumpID  = $self->stash('id');
     my $program  = $self->stash('program');
     my $rpm  = $self->stash('rpm');
+    if (!$rpm && !$program && !$pumpID) {
+      return $self->render(json => {error => "missing fields"});
+    }
     my $pumpResponse = $self->setPumpProgram($pumpID, $program, $rpm);
     return $self->render(json => {pump => $pumpResponse->{'pump'}, program => $pumpResponse->{'program'}, rpm => $pumpResponse->{'speed'}});
 };
 
-# set the pump run.
+# set the pump run with duration
 get '/api/pump/run/:id/:program/:duration' => sub {
     my $self  = shift;
     my $pumpID  = $self->stash('id');
     my $program  = $self->stash('program');
     my $duration  = $self->stash('duration');
+    if (!$duration && !$program && !$pumpID) {
+      return $self->render(json => {error => "missing fields"});
+    }
     my $pumpResponse = $self->setPumpRun($pumpID, $program, $duration);
     return $self->render(json => {pump => $pumpResponse->{'pump'}, program => $pumpResponse->{'program'}, duration => $pumpResponse->{'duration'}});
+};
+
+# pump on or off
+get '/api/pump/power/:id/:value' => sub {
+    my $self  = shift;
+    my $pumpID  = $self->stash('id');
+    my $value  = $self->stash('value');
+    if (!$pumpID && !$value) {
+      return $self->render(json => {error => "missing fields"});
+    }
+    my $pumpResponse = $self->setPumpPower($pumpID, $value);
+    return $self->render(json => {pump => $pumpResponse->{'pump'}, power => $pumpResponse->{'power'}});
 };
 
 # relay control
@@ -219,6 +270,9 @@ get '/api/relay/set/:id/:value' => sub {
     my $self  = shift;
     my $relayID  = $self->stash('id');
     my $value  = $self->stash('value');
+    if (!$relayID && !$value) {
+      return $self->render(json => {error => "missing relay ID and value"});
+    }
     my $relayStatus = $self->toggleRelay($relayID, $value);
     return $self->render(json => {relay => $relayID, value => $relayStatus});
 };
@@ -227,6 +281,9 @@ get '/api/relay/set/:id/:value' => sub {
 get '/api/relay/status/:id' => sub {
     my $self  = shift;
     my $relayID  = $self->stash('id');
+    if (!$relayID) {
+      return $self->render(json => {error => "missing relay ID"});
+    }
     my $relayStatus = $self->relayStatus($relayID);
     return $self->render(json => {relay => $relayID, value => $relayStatus});
 };
