@@ -1,4 +1,4 @@
-#!/Users/drew/perl5/perlbrew/perls/perl-5.21.11/bin/perl
+#!/usr/bin/perl
 # this is the api into jack, he's our leader, sky net can suck it.
 #
 use Mojolicious::Lite;
