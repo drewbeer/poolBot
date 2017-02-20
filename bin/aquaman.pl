@@ -120,7 +120,7 @@ helper setPumpRun => sub {
   # fetch the pump status and only one since thats all we have
   my $pumpRunCMD = "$pumpUrl/pumpCommand/run/pump/$pumpID/program/$program/duration/$duration";
   my $pumpResponseJSON = LWP::Simple::get($pumpRunCMD);
-  my $pumpResponse = JSON->new->utf8(1)->decode($pumpResponseJSON);
+  my $pumpResponse = decode_json($pumpResponseJSON);
   return $pumpResponse;
 };
 
@@ -135,7 +135,7 @@ helper setPumpPower => sub {
   }
   my $pumpRunCMD = "$pumpUrl/pumpCommand/$value/pump/$pumpID";
   my $pumpResponseJSON = LWP::Simple::get($pumpRunCMD);
-  my $pumpResponse = JSON->new->utf8(1)->decode($pumpResponseJSON);
+  my $pumpResponse = decode_json($pumpResponseJSON);
   return $pumpResponse;
 };
 
@@ -145,7 +145,7 @@ helper setPumpProgram => sub {
   # fetch the pump status and only one since thats all we have
   my $pumpProgramCMD = "$pumpUrl/pumpCommand/save/pump/$pumpID/program/$program/rpm/$rpm";
   my $pumpResponseJSON = LWP::Simple::get($pumpProgramCMD);
-  my $pumpResponse = JSON->new->utf8(1)->decode($pumpResponseJSON);
+  my $pumpResponse = decode_json($pumpResponseJSON);
   return $pumpResponse;
 };
 
