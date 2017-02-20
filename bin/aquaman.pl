@@ -73,7 +73,7 @@ helper bmc => sub {
 
 
 sub fetchUrl {
-  my ($url) = @_;
+  my ($self, $url) = @_;
   my $response = LWP::Simple::get($url);
   return $response;
 };
@@ -94,25 +94,25 @@ helper fetchPumpStatus => sub {
 };
 
 helper toggleRelay => sub {
-  my ($relay, $value) = @_;
+  my ($self, $relay, $value) = @_;
   if ($value > 1) {
     return 0;
   }
   if ($value) {
-    $bcm->gpio_set( $relay );
+    $self->bcm->gpio_set( $relay );
   } else {
-    $bcm->gpio_clr( $relay );
+    $self->bcm->gpio_clr( $relay );
   }
-  my $relayStatus = $bcm->gpio_lev( $relay );
+  my $relayStatus = $self->bcm->gpio_lev( $relay );
   return $relayStatus;
 };
 
 helper relayStatus => sub {
-  my ($relay) = @_;
+  my ($self, $relay) = @_;
   if (!$relay) {
     return 0;
   }
-  my $relayStatus = $bcm->gpio_lev( $relay );
+  my $relayStatus = $self->bcm->gpio_lev( $relay );
   return $relayStatus;
 };
 
