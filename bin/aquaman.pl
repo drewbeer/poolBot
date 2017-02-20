@@ -50,13 +50,13 @@ my $bcm = "";
 #     $dbh = "";
 # };
 
-helper bmc => sub {
-  my($bmcUser, $bmcGroup) = ('pi', 'pi');
+helper bcm => sub {
+  my($bcmUser, $bcmGroup) = ('pi', 'pi');
   if ($bcm) {
       return $bcm;
   } else {
       $bcm = HiPi::BCM2835->new();
-      HiPi::Utils::drop_permissions_name($bmcUser, $bmcGroup);
+      HiPi::Utils::drop_permissions_name($bcmUser, $bcmGroup);
       return $bcm;
   }
 };
