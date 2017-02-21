@@ -65,7 +65,7 @@ helper log => sub {
       $log->info("Starting AquaMan Logging System");
       return $log;
     }
-}
+};
 
 # Create db connection if needed
 helper db => sub {
@@ -98,7 +98,7 @@ helper cronLog => sub {
     my ($self, $level, $message) = @_;
     my $DBG_MAP = { 0 => $INFO, 1 => $WARN, 2 => $ERROR };
     $self->log($DBG_MAP->{$level},$msg);
-}
+};
 
 # GPIO stuff
 helper bcm => sub {
