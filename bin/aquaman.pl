@@ -19,39 +19,54 @@ my $relays = ();
 my $pumpUrl = "http://10.42.2.19:3000";
 
 # relay map
-# ValveOne = 5
-# ValveTwo = 4
-# SaltRelay = 16
-# HeaterRelay = 12
-# SpaRelay = 18
 $relays->{'valveIn'} = 5;
 $relays->{'ValveOut'} = 4;
 $relays->{'salt'} = 16;
 $relays->{'heater'} = 12;
 $relays->{'spa'} = 18;
 
-# log file setup
-Log::Log4perl->init("../etc/aquaman.log.conf");
-
-# logging setup
-my $log = Log::Log4perl->get_logger("aquaman");
-
-$log->info("Starting AquaMan");
-
+# database scheduling
 
 # we should load up the cron for any schedules in memory and start them before the api kicks off
 
-
-
-# listen on code
+# web server listen
 app->config(aquaman => {listen => ['http://*:3000']});
 
 # Global handle for db connections
 my $dbh = "";
 my $bcm = "";
 my $cron = "";
+my $log = "";
+
+
+# startup
+sub startup {
+  my $self = shift;
+  $self->log->info('Starting Aquaman');
+
+  # should setup cron here too
+  # my $entry = "0-59/5 * * * *";
+  # $self->cron->add_entry($entry,\&cronDispatch,$pumpID,$program,$duration);
+  # $self->cron->run(detach=>1,pid_file=>"/var/run/scheduler.pid");
+}
+
+
 
 ## Helpers
+helper log => sub {
+    if ($log) {
+      return $log;
+    } else {
+      # log file setup
+      Log::Log4perl->init("../etc/aquaman.log.conf");
+
+      # logging setup
+      $log = Log::Log4perl->get_logger("aquaman");
+      $log->info("Starting AquaMan Logging System");
+      return $log;
+    }
+}
+
 # Create db connection if needed
 helper db => sub {
     if($dbh){
@@ -78,6 +93,12 @@ helper cron => sub {
         return $cron;
     }
 };
+
+helper cronLog => sub {
+    my ($self, $level, $message) = @_;
+    my $DBG_MAP = { 0 => $INFO, 1 => $WARN, 2 => $ERROR };
+    $self->log($DBG_MAP->{$level},$msg);
+}
 
 # GPIO stuff
 helper bcm => sub {
