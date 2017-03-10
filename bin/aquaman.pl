@@ -87,6 +87,30 @@ sub fetchUrl {
   return $decodedResponse;
 };
 
+# translates the relay status
+sub powerNameMap {
+  my ($value, $direction) = @_;
+  # translate num to name
+  if (!$direction) {
+    my $name = "off";
+    # set the value based on name instead
+    if ($value) {
+      $name = "on";
+    }
+    return $name;
+  }
+  # translate name to num
+  if ($direction) {
+    my $num = 0;
+    # set the value based on name instead
+    if ($value eq "on") {
+      $num = 1;
+    }
+    return $num;
+  }
+  return 0;
+}
+
 # $cron->add_entry("0-40/5,55 3,22 * Jan-Nov Fri", {
 #   sub  => \&runSchedule,
 #     args => [ {
@@ -179,12 +203,6 @@ helper setPumpRun => sub {
 # pump power
 helper setPumpPower => sub {
   my ($self, $pumpID, $value) = @_;
-  my $power = "";
-  if ($value) {
-    $power = 'on';
-  } else {
-    $power = 'off';
-  }
   my $pumpRunCMD = "$pumpUrl/pumpCommand/$value/pump/$pumpID";
   my $pumpResponse = fetchUrl($pumpRunCMD);
   return $pumpResponse;
@@ -202,17 +220,20 @@ helper setPumpProgram => sub {
 # relay control
 helper toggleRelay => sub {
   my ($self, $relay, $value) = @_;
-  if ($value > 1) {
-    return 0;
-  }
+
+  my $val = powerNameMap($value, 1);
+
+  # get the relay id by name
   my $relayID = $relays->{$relay};
-  if ($value) {
+
+  if ($val) {
     $self->bcm->gpio_set( $relayID );
   } else {
     $self->bcm->gpio_clr( $relayID );
   }
   my $relayStatus = $self->bcm->gpio_lev( $relayID );
-  return $relayStatus;
+  my $relayStatusName = powerNameMap($relayStatus, 0);
+  return $relayStatusName;
 };
 
 # relay status
@@ -223,6 +244,7 @@ helper relayStatus => sub {
     return 0;
   }
   my $relayStatus = $self->bcm->gpio_lev( $relayID );
+  $relayStatusName = powerNameMap($relayStatus, 0);
   return $relayStatus;
 };
 
