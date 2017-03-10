@@ -129,7 +129,7 @@ helper bcm => sub {
 
 # url fetcher
 # pass url, and if json should be parsed
-sub fetchUrl => sub {
+sub fetchUrl {
   my ($url, $isJson) = @_;
   my $response = LWP::Simple::get($url);
   if (!$response) {
