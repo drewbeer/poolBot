@@ -7,7 +7,6 @@ use DBI;
 use strict;
 use warnings;
 use DateTime;
-use Date::Calc qw/Delta_Days/;
 use LWP::Simple qw(!get);
 use Log::Log4perl;
 use Data::Dumper;
@@ -42,7 +41,11 @@ my $log = "";
 # startup
 sub startup {
   my $self = shift;
-  $self->log->info('Starting Aquaman');
+  $self->log->info('Aquaman Starting Up');
+
+  # load up any saved schedules
+  ## cron entry
+  ##
 
   # should setup cron here too
   # my $entry = "0-59/5 * * * *";
@@ -50,7 +53,24 @@ sub startup {
   # $self->cron->run(detach=>1,pid_file=>"/var/run/scheduler.pid");
 }
 
+# scheduler
+sub runSchedule {
+  my $args = shift;
+  # $args->{id}
+  # $args->{program}
+  # $args->{duration}
 
+}
+
+# $cron->add_entry("0-40/5,55 3,22 * Jan-Nov Fri", {
+#   sub  => \&runSchedule,
+#     args => [ {
+#       id   => 1,
+#       program => 2,
+#       duration => 300
+#     } ],
+#    eval => 0 }
+# );
 
 ## Helpers
 helper log => sub {
@@ -62,7 +82,6 @@ helper log => sub {
 
       # logging setup
       $log = Log::Log4perl->get_logger("aquaman");
-      $log->info("Starting AquaMan Logging System");
       return $log;
     }
 };
@@ -89,7 +108,9 @@ helper cron => sub {
     if($cron){
         return $cron;
     }else{
-        $cron = new Schedule::Cron(\&dispatcher);
+        $cron = new Schedule::Cron(  sub { print "@_","\n" },
+                                      file  => "aquaman.sched",
+                                      eval  => 1);
         return $cron;
     }
 };
@@ -107,10 +128,15 @@ helper bcm => sub {
 };
 
 # url fetcher
-helper fetchUrl => sub {
-  my ($self, $url) = @_;
+# pass url, and if json should be parsed
+sub fetchUrl => sub {
+  my ($url, $isJson) = @_;
   my $response = LWP::Simple::get($url);
-  return $response;
+  if (!$response) {
+    return 0;
+  }
+  my $decodedResponse = decode_json($response);
+  return $decodedResponse;
 };
 
 # pump status
@@ -119,9 +145,8 @@ helper fetchPumpStatus => sub {
   my $pumpStatus = ();
   # fetch the pump status and only one since thats all we have
   my $pumpStatusUrl = "$pumpUrl/pump";
-  my $pumpResponse = LWP::Simple::get($pumpStatusUrl);
+  my $pumpResponse = fetchUrl($pumpStatusUrl);
   if ($pumpResponse) {
-    my $pumpStatusData = decode_json($pumpResponse);
     foreach my $pumpStat (keys %{ $pumpStatusData->[1] }) {
       $pumpStatus->{'1'}->{$pumpStat} = $pumpStatusData->[1]->{$pumpStat};
     }
@@ -134,8 +159,7 @@ helper setPumpRun => sub {
   my ($self, $pumpID, $program, $duration) = @_;
   # fetch the pump status and only one since thats all we have
   my $pumpRunCMD = "$pumpUrl/pumpCommand/run/pump/$pumpID/program/$program/duration/$duration";
-  my $pumpResponseJSON = LWP::Simple::get($pumpRunCMD);
-  my $pumpResponse = decode_json($pumpResponseJSON);
+  my $pumpResponse = fetchUrl($pumpRunCMD);
   return $pumpResponse;
 };
 
@@ -149,8 +173,7 @@ helper setPumpPower => sub {
     $power = 'off';
   }
   my $pumpRunCMD = "$pumpUrl/pumpCommand/$value/pump/$pumpID";
-  my $pumpResponseJSON = LWP::Simple::get($pumpRunCMD);
-  my $pumpResponse = decode_json($pumpResponseJSON);
+  my $pumpResponse = fetchUrl($pumpRunCMD);
   return $pumpResponse;
 };
 
@@ -159,8 +182,7 @@ helper setPumpProgram => sub {
   my ($self, $pumpID, $program, $rpm) = @_;
   # fetch the pump status and only one since thats all we have
   my $pumpProgramCMD = "$pumpUrl/pumpCommand/save/pump/$pumpID/program/$program/rpm/$rpm";
-  my $pumpResponseJSON = LWP::Simple::get($pumpProgramCMD);
-  my $pumpResponse = decode_json($pumpResponseJSON);
+  my $pumpResponse = fetchUrl($pumpProgramCMD);
   return $pumpResponse;
 };
 
