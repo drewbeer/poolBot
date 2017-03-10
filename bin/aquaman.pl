@@ -245,7 +245,7 @@ helper relayStatus => sub {
   }
   my $relayStatus = $self->bcm->gpio_lev( $relayID );
   my $relayStatusName = powerNameMap($relayStatus, 0);
-  return $relayStatus;
+  return $relayStatusName;
 };
 
 
