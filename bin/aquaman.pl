@@ -38,6 +38,7 @@ my $cron = "";
 my $log = "";
 
 
+## Functions
 # startup
 sub startup {
   my $self = shift;
@@ -61,6 +62,30 @@ sub runSchedule {
   # $args->{duration}
 
 }
+
+# generate timestamp data
+sub timeStamp {
+	my $self = shift;
+	# returns a timestamp for the file
+	my $timestamp = ();
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+	$timestamp->{'file'} = sprintf ( "%04d%02d%02d-%02d.%02d.%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
+	$timestamp->{'now'} = sprintf ( "%04d%02d%02d %02d:%02d:%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
+	$timestamp->{'nowMinute'} = sprintf ( "%02d", $min);
+
+	return $timestamp;
+};
+
+# pass url, and if json should be parsed
+sub fetchUrl {
+  my ($url, $isJson) = @_;
+  my $response = LWP::Simple::get($url);
+  if (!$response) {
+    return 0;
+  }
+  my $decodedResponse = decode_json($response);
+  return $decodedResponse;
+};
 
 # $cron->add_entry("0-40/5,55 3,22 * Jan-Nov Fri", {
 #   sub  => \&runSchedule,
@@ -125,18 +150,6 @@ helper bcm => sub {
       HiPi::Utils::drop_permissions_name($bcmUser, $bcmGroup);
       return $bcm;
   }
-};
-
-# url fetcher
-# pass url, and if json should be parsed
-sub fetchUrl {
-  my ($url, $isJson) = @_;
-  my $response = LWP::Simple::get($url);
-  if (!$response) {
-    return 0;
-  }
-  my $decodedResponse = decode_json($response);
-  return $decodedResponse;
 };
 
 # pump status
@@ -213,19 +226,8 @@ helper relayStatus => sub {
   return $relayStatus;
 };
 
-# generate timestamp data
-helper timeStamp => sub {
-	my $self = shift;
-	# returns a timestamp for the file
-	my $timestamp = ();
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-	$timestamp->{'file'} = sprintf ( "%04d%02d%02d-%02d.%02d.%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
-	$timestamp->{'now'} = sprintf ( "%04d%02d%02d %02d:%02d:%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
-	$timestamp->{'nowMinute'} = sprintf ( "%02d", $min);
 
-	return $timestamp;
-};
-
+## Api Routes
 # # Always check auth token!  Here we validate that every API request
 # # has a valid token
 # under sub {
