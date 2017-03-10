@@ -261,6 +261,9 @@ get '/api/pump/status/:id' => sub {
       return $self->render(json => {error => "missing pump number"});
     }
     my $pumpStatus = $self->fetchPumpStatus($pumpID);
+    if (!$pumpStatus) {
+      return $self-render(json => {error => "pump controller unavailable"});
+    }
     return $self->render(json => {name => $pumpStatus->{$pumpID}->{'name'}, watts => $pumpStatus->{$pumpID}->{'watts'}, rpm => $pumpStatus->{$pumpID}->{'rpm'}, run => $pumpStatus->{$pumpID}->{'run'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program2rpm => $pumpStatus->{$pumpID}->{'program2rpm'}, program3rpm => $pumpStatus->{$pumpID}->{'program3rpm'}, program4rpm => $pumpStatus->{$pumpID}->{'program4rpm'},programRemaining => $pumpStatus->{$pumpID}->{'currentrunning'}->{'remainingduration'}, programRunning => $pumpStatus->{$pumpID}->{'currentrunning'}->{'value'}, programMode => $pumpStatus->{$pumpID}->{'currentrunning'}->{'mode'}});
 };
 
@@ -274,6 +277,9 @@ get '/api/pump/set/:id/:program/:rpm' => sub {
       return $self->render(json => {error => "missing fields"});
     }
     my $pumpResponse = $self->setPumpProgram($pumpID, $program, $rpm);
+    if (!$pumpResponse) {
+      return $self-render(json => {error => "pump controller unavailable"});
+    }
     return $self->render(json => {pump => $pumpResponse->{'pump'}, program => $pumpResponse->{'program'}, rpm => $pumpResponse->{'speed'}});
 };
 
@@ -287,6 +293,9 @@ get '/api/pump/run/:id/:program/:duration' => sub {
       return $self->render(json => {error => "missing fields"});
     }
     my $pumpResponse = $self->setPumpRun($pumpID, $program, $duration);
+    if (!$pumpResponse) {
+      return $self-render(json => {error => "pump controller unavailable"});
+    }
     return $self->render(json => {pump => $pumpResponse->{'pump'}, program => $pumpResponse->{'program'}, duration => $pumpResponse->{'duration'}});
 };
 
@@ -299,6 +308,9 @@ get '/api/pump/power/:id/:value' => sub {
       return $self->render(json => {error => "missing fields"});
     }
     my $pumpResponse = $self->setPumpPower($pumpID, $value);
+    if (!$pumpResponse) {
+      return $self-render(json => {error => "pump controller unavailable"});
+    }
     return $self->render(json => {pump => $pumpResponse->{'pump'}, power => $pumpResponse->{'power'}});
 };
 
