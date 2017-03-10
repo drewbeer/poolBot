@@ -147,8 +147,8 @@ helper fetchPumpStatus => sub {
   my $pumpStatusUrl = "$pumpUrl/pump";
   my $pumpResponse = fetchUrl($pumpStatusUrl);
   if ($pumpResponse) {
-    foreach my $pumpStat (keys %{ $pumpStatusData->[1] }) {
-      $pumpStatus->{'1'}->{$pumpStat} = $pumpStatusData->[1]->{$pumpStat};
+    foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
+      $pumpStatus->{'1'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
     }
   }
   return $pumpStatus;
