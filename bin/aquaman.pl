@@ -16,6 +16,7 @@ use Schedule::Cron;
 
 my $relays = ();
 my $pumpUrl = "http://10.42.2.19:3000";
+my $rachioKey = "4236ff47-df71-4c5d-8520-c4fa9236944d";
 
 # relay map
 $relays->{'valveIn'} = 5;
@@ -80,6 +81,18 @@ sub timeStamp {
 sub fetchUrl {
   my ($url, $isJson) = @_;
   my $response = LWP::Simple::get($url);
+  if (!$response) {
+    return 0;
+  }
+  my $decodedResponse = decode_json($response);
+  return $decodedResponse;
+};
+
+# fetch the rachio url
+sub fetchRachioUrl {
+  my ($url, $value) = @_;
+  my $curlUrl = "curl -X PUT -H "Content-Type: application/json" -H "Authorization: Bearer $rachioKey" -d '$value' $url"
+  my $response = `$curlUrl`;
   if (!$response) {
     return 0;
   }
@@ -176,6 +189,37 @@ helper bcm => sub {
   }
 };
 
+# rachio helper
+#
+# start zone 8
+# value: '{ "id" : "c1ec26b1-f514-44d1-bcec-bf46c7bea5c8", "duration" : 60 }'
+# url: 'https://api.rach.io/1/public/zone/start'
+#
+helper startPoolFill => sub {
+  my ($self, $duration) = @_;
+  my $rachioValue = "{ 'id' : 'c1ec26b1-f514-44d1-bcec-bf46c7bea5c8', 'duration' : $duration }";
+  my $rachioStartUrl = 'https://api.rach.io/1/public/zone/start';
+  my $rachioResponse = fetchRachioUrl($rachioUrl, $rachioStartUrl);
+  if ($rachioResponse) {
+    print Dumper($rachioResponse);
+  }
+  return $rachioResponse;
+};
+
+# # stop all water
+# value '{ "id" : "72c57cc8-ce7e-4faa-a99a-1740aa1a2431" }'
+# url 'https://api.rach.io/1/public/device/stop_water'
+helper stopPoolFill => sub {
+  my ($self) = @_;
+  my $rachioValue = '{ "id" : "72c57cc8-ce7e-4faa-a99a-1740aa1a2431" }';
+  my $rachioStopUrl = 'https://api.rach.io/1/public/device/stop_water';
+  my $rachioResponse = fetchRachioUrl($rachioStopUrl, $rachioValue);
+  if ($rachioResponse) {
+    print Dumper($rachioResponse);
+  }
+  return $rachioResponse;
+};
+
 # pump status
 helper fetchPumpStatus => sub {
   my $self = shift;
@@ -245,7 +289,7 @@ helper relayStatus => sub {
   }
   my $relayStatus = $self->bcm->gpio_lev( $relayID );
   my $relayStatusName = powerNameMap($relayStatus, 0);
-  return $relayStatusName;
+  return $relayStatusName ;
 };
 
 
@@ -321,6 +365,30 @@ get '/api/pump/run/:id/:program/:duration' => sub {
       return $self->render(json => {error => "pump controller unavailable"});
     }
     return $self->render(json => {pump => $pumpResponse->{'pump'}, program => $pumpResponse->{'program'}, duration => $pumpResponse->{'duration'}});
+};
+
+# turn on pool fill
+get '/api/pool/water/on/:duration' => sub {
+    my $self  = shift;
+    my $duration  = $self->stash('duration');
+    if (!$duration) {
+      return $self->render(json => {error => "missing duration"});
+    }
+    my $poolFillResponse = $self->startPoolFill($duration);
+    if (!$poolFillResponse) {
+      return $self->render(json => {error => "rachio not working"});
+    }
+    return $self->render(json => {pump => $poolFillResponse->{'duration'}, power => $poolFillResponse->{'remaining'}});
+};
+
+# turn off pool fill
+get '/api/pool/water/off' => sub {
+    my $self  = shift;
+    my $poolFillResponse = $self->stopPoolFill();
+    if (!$poolFillResponse) {
+      return $self->render(json => {error => "rachio not working"});
+    }
+    return $self->render(json => {pump => $poolFillResponse->{'status'}});
 };
 
 # pump on or off
