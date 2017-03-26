@@ -199,7 +199,7 @@ helper startPoolFill => sub {
   my ($self, $duration) = @_;
   my $rachioValue = "{ 'id' : 'c1ec26b1-f514-44d1-bcec-bf46c7bea5c8', 'duration' : $duration }";
   my $rachioStartUrl = 'https://api.rach.io/1/public/zone/start';
-  my $rachioResponse = fetchRachioUrl($rachioUrl, $rachioStartUrl);
+  my $rachioResponse = fetchRachioUrl($rachioStartUrl, $rachioStartUrl);
   if ($rachioResponse) {
     print Dumper($rachioResponse);
   }
