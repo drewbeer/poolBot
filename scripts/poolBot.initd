@@ -3,9 +3,9 @@
 
 case "$1" in
   start)
-    echo "Starting aquaBot"
-    cd /opt/aquaBot/
-    sudo /usr/bin/python bin/aquaBot.py &
+    echo "Starting poolBot"
+    cd /opt/poolBot/
+    sudo /usr/bin/perl bin/poolBot.py &
   ;;
   stop)
     echo "Stopping aquaBot"

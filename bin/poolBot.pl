@@ -30,7 +30,7 @@ $relays->{'spa'} = 18;
 # we should load up the cron for any schedules in memory and start them before the api kicks off
 
 # web server listen
-app->config(aquaman => {listen => ['http://*:3000']});
+app->config(poolBot => {listen => ['http://*:3000']});
 
 # Global handle for db connections
 my $dbh = "";
@@ -43,7 +43,7 @@ my $log = "";
 # startup
 sub startup {
   my $self = shift;
-  $self->log->info('Aquaman Starting Up');
+  $self->log->info('poolBot Starting Up');
 
   # load up any saved schedules
   ## cron entry
@@ -140,10 +140,10 @@ helper log => sub {
       return $log;
     } else {
       # log file setup
-      Log::Log4perl->init("../etc/aquaman.log.conf");
+      Log::Log4perl->init("../etc/poolBot.log.conf");
 
       # logging setup
-      $log = Log::Log4perl->get_logger("aquaman");
+      $log = Log::Log4perl->get_logger("poolBot");
       return $log;
     }
 };
@@ -153,7 +153,7 @@ helper db => sub {
     if($dbh){
         return $dbh;
     }else{
-        $dbh = DBI->connect('DBI:mysql:database=aquaman;host=localhost','root','') or die $DBI::errstr;
+        $dbh = DBI->connect('DBI:mysql:database=poolBot;host=localhost','root','') or die $DBI::errstr;
         return $dbh;
     }
 };
@@ -171,7 +171,7 @@ helper cron => sub {
         return $cron;
     }else{
         $cron = new Schedule::Cron(  sub { print "@_","\n" },
-                                      file  => "aquaman.sched",
+                                      file  => "poolBot.sched",
                                       eval  => 1);
         return $cron;
     }
