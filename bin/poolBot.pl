@@ -92,7 +92,7 @@ sub fetchUrl {
 sub fetchRachioUrl {
   my ($url, $value) = @_;
   my $curlUrl = qq (
-    curl -X PUT -H 'Content-Type: application/json' -H 'Authorization: Bearer $rachioKey' -d "$value" $url
+    curl -s -X PUT -H 'Content-Type: application/json' -H 'Authorization: Bearer $rachioKey' -d "$value" $url
   );
   my $response = `$curlUrl`;
   if (!$response) {
@@ -187,7 +187,7 @@ helper cron => sub {
 #
 helper startPoolFill => sub {
   my ($self, $duration) = @_;
-  my $rachioValue = "{ 'id' : 'c1ec26b1-f514-44d1-bcec-bf46c7bea5c8', 'duration' : '$duration' }";
+  my $rachioValue = "{ 'id' : 'c1ec26b1-f514-44d1-bcec-bf46c7bea5c8', 'duration' : $duration }";
   my $rachioStartUrl = 'https://api.rach.io/1/public/zone/start';
   my $rachioResponse = fetchRachioUrl($rachioStartUrl, $rachioValue);
   return $rachioResponse;
