@@ -10,8 +10,8 @@ use DateTime;
 use LWP::Simple qw(!get);
 use Log::Log4perl;
 use Data::Dumper;
-use HiPi::BCM2835;
-use HiPi::Utils;
+use HiPi::Device::GPIO;
+use HiPi::Constant qw( :raspberry );
 use Schedule::Cron;
 
 my $relays = ();
@@ -183,8 +183,7 @@ helper bcm => sub {
   if ($bcm) {
       return $bcm;
   } else {
-      $bcm = HiPi::BCM2835->new();
-      HiPi::Utils::drop_permissions_name($bcmUser, $bcmGroup);
+      $bcm  = HiPi::Device::GPIO->new();
       return $bcm;
   }
 };
@@ -263,20 +262,15 @@ helper setPumpProgram => sub {
 
 # relay control
 helper toggleRelay => sub {
-  my ($self, $relay, $value) = @_;
-
+  my ($self, $relayName, $value) = @_;
   my $val = powerNameMap($value, 1);
 
   # get the relay id by name
   my $relayID = $relays->{$relay};
-
-  if ($val) {
-    $self->bcm->gpio_set( $relayID );
-  } else {
-    $self->bcm->gpio_clr( $relayID );
-  }
-  my $relayStatus = $self->bcm->gpio_lev( $relayID );
-  my $relayStatusName = powerNameMap($relayStatus, 0);
+  my $pin  = $bcm->get_pin( $relayID );
+  $pin->value($val);
+  my $mode = $pin->mode();
+  my $relayStatusName = powerNameMap($mode, 0);
   return $relayStatusName;
 };
 
@@ -287,8 +281,9 @@ helper relayStatus => sub {
   if (!$relayID) {
     return 0;
   }
-  my $relayStatus = $self->bcm->gpio_lev( $relayID );
-  my $relayStatusName = powerNameMap($relayStatus, 0);
+  my $pin  = $bcm->get_pin( $relayID );
+  my $mode = $pin->mode();
+  my $relayStatusName = powerNameMap($mode, 0);
   return $relayStatusName ;
 };
 
