@@ -257,10 +257,11 @@ helper toggleRelay => sub {
   # get the relay id by name
   my $relayID = $relays->{$relayName};
   my $bcm  = HiPi::Device::GPIO->new();
+  $bcm->export_pin( $relayID );
   my $pin  = $bcm->get_pin( $relayID );
   $pin->value($val);
-  my $mode = $pin->mode();
-  my $relayStatusName = powerNameMap($mode, 0);
+  my $pinStatus = $pin->value();
+  my $relayStatusName = powerNameMap($pinStatus, 0);
   return $relayStatusName;
 };
 
@@ -272,9 +273,10 @@ helper relayStatus => sub {
     return 0;
   }
   my $bcm  = HiPi::Device::GPIO->new();
+  $bcm->export_pin( $relayID );
   my $pin  = $bcm->get_pin( $relayID );
-  my $mode = $pin->mode();
-  my $relayStatusName = powerNameMap($mode, 0);
+  my $pinStatus = $pin->value();
+  my $relayStatusName = powerNameMap($pinStatus, 0);
   return $relayStatusName ;
 };
 
