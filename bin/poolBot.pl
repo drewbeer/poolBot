@@ -177,17 +177,6 @@ helper cron => sub {
     }
 };
 
-# GPIO stuff
-helper bcm => sub {
-  my($bcmUser, $bcmGroup) = ('pi', 'pi');
-  if ($bcm) {
-      return $bcm;
-  } else {
-      $bcm  = HiPi::Device::GPIO->new();
-      return $bcm;
-  }
-};
-
 # rachio helper
 #
 # start zone 8
@@ -267,6 +256,7 @@ helper toggleRelay => sub {
 
   # get the relay id by name
   my $relayID = $relays->{$relayName};
+  my $bcm  = HiPi::Device::GPIO->new();
   my $pin  = $bcm->get_pin( $relayID );
   $pin->value($val);
   my $mode = $pin->mode();
@@ -281,6 +271,7 @@ helper relayStatus => sub {
   if (!$relayID) {
     return 0;
   }
+  my $bcm  = HiPi::Device::GPIO->new();
   my $pin  = $bcm->get_pin( $relayID );
   my $mode = $pin->mode();
   my $relayStatusName = powerNameMap($mode, 0);
