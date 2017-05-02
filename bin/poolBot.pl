@@ -266,7 +266,7 @@ helper toggleRelay => sub {
   my $val = powerNameMap($value, 1);
 
   # get the relay id by name
-  my $relayID = $relays->{$relay};
+  my $relayID = $relays->{$relayName};
   my $pin  = $bcm->get_pin( $relayID );
   $pin->value($val);
   my $mode = $pin->mode();
@@ -276,8 +276,8 @@ helper toggleRelay => sub {
 
 # relay status
 helper relayStatus => sub {
-  my ($self, $relay) = @_;
-  my $relayID = $relays->{$relay};
+  my ($self, $relayName) = @_;
+  my $relayID = $relays->{$relayName};
   if (!$relayID) {
     return 0;
   }
