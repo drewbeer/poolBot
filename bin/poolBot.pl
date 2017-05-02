@@ -187,7 +187,7 @@ helper cron => sub {
 #
 helper startPoolFill => sub {
   my ($self, $duration) = @_;
-  my $rachioValue = "{ 'id' : 'c1ec26b1-f514-44d1-bcec-bf46c7bea5c8', 'duration' : $duration }";
+  my $rachioValue = "{ 'id' : 'c1ec26b1-f514-44d1-bcec-bf46c7bea5c8', 'duration' : '$duration' }";
   my $rachioStartUrl = 'https://api.rach.io/1/public/zone/start';
   my $rachioResponse = fetchRachioUrl($rachioStartUrl, $rachioValue);
   return $rachioResponse;
@@ -198,7 +198,7 @@ helper startPoolFill => sub {
 # url 'https://api.rach.io/1/public/device/stop_water'
 helper stopPoolFill => sub {
   my ($self) = @_;
-  my $rachioValue = '{ "id" : "72c57cc8-ce7e-4faa-a99a-1740aa1a2431" }';
+  my $rachioValue = "{ 'id' : '72c57cc8-ce7e-4faa-a99a-1740aa1a2431' }";
   my $rachioStopUrl = 'https://api.rach.io/1/public/device/stop_water';
   my $rachioResponse = fetchRachioUrl($rachioStopUrl, $rachioValue);
   return $rachioResponse;
