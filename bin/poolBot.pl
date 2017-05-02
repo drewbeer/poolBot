@@ -92,7 +92,7 @@ sub fetchUrl {
 sub fetchRachioUrl {
   my ($url, $value) = @_;
   my $curlUrl = qq (
-    curl -X PUT -H 'Content-Type: application/json' -H 'Authorization: Bearer '$rachioKey' -d "$value" $url
+    curl -X PUT -H 'Content-Type: application/json' -H 'Authorization: Bearer $rachioKey' -d "$value" $url
   );
   my $response = `$curlUrl`;
   if (!$response) {
