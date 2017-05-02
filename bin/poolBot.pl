@@ -189,10 +189,7 @@ helper startPoolFill => sub {
   my ($self, $duration) = @_;
   my $rachioValue = "{ 'id' : 'c1ec26b1-f514-44d1-bcec-bf46c7bea5c8', 'duration' : $duration }";
   my $rachioStartUrl = 'https://api.rach.io/1/public/zone/start';
-  my $rachioResponse = fetchRachioUrl($rachioStartUrl, $rachioStartUrl);
-  if ($rachioResponse) {
-    print Dumper($rachioResponse);
-  }
+  my $rachioResponse = fetchRachioUrl($rachioStartUrl, $rachioValue);
   return $rachioResponse;
 };
 
@@ -204,9 +201,6 @@ helper stopPoolFill => sub {
   my $rachioValue = '{ "id" : "72c57cc8-ce7e-4faa-a99a-1740aa1a2431" }';
   my $rachioStopUrl = 'https://api.rach.io/1/public/device/stop_water';
   my $rachioResponse = fetchRachioUrl($rachioStopUrl, $rachioValue);
-  if ($rachioResponse) {
-    print Dumper($rachioResponse);
-  }
   return $rachioResponse;
 };
 
