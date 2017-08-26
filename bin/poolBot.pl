@@ -10,8 +10,6 @@ use DateTime;
 use LWP::Simple qw(!get);
 use Log::Log4perl;
 use Data::Dumper;
-use HiPi::Device::GPIO;
-use HiPi::Constant qw( :raspberry );
 use Schedule::Cron;
 
 my $relays = ();
@@ -19,11 +17,11 @@ my $pumpUrl = "http://10.42.2.19:3000";
 my $rachioKey = "4236ff47-df71-4c5d-8520-c4fa9236944d";
 
 # relay map
-$relays->{'valveIn'} = 5;
-$relays->{'ValveOut'} = 4;
-$relays->{'salt'} = 16;
-$relays->{'heater'} = 12;
-$relays->{'spa'} = 18;
+$relays->{'valveIn'} = 21;
+$relays->{'ValveOut'} = 7;
+$relays->{'salt'} = 27;
+$relays->{'heater'} = 26;
+$relays->{'spa'} = 1;
 
 # database scheduling
 
@@ -34,7 +32,6 @@ app->config(poolBot => {listen => ['http://*:3000']});
 
 # Global handle for db connections
 my $dbh = "";
-my $bcm = "";
 my $cron = "";
 my $log = "";
 
@@ -91,9 +88,7 @@ sub fetchUrl {
 # fetch the rachio url
 sub fetchRachioUrl {
   my ($url, $value) = @_;
-  my $curlUrl = qq (
-    curl -s -X PUT -H 'Content-Type: application/json' -H 'Authorization: Bearer $rachioKey' -d "$value" $url
-  );
+  my $curlUrl = "curl -X PUT -H 'Content-Type: application/json' -H 'Authorization: Bearer 'rachioKey' -d '$value' $url";
   my $response = `$curlUrl`;
   if (!$response) {
     return 0;
@@ -102,28 +97,40 @@ sub fetchRachioUrl {
   return $decodedResponse;
 };
 
-# translates the relay status
-sub powerNameMap {
-  my ($value, $direction) = @_;
-  # translate num to name
-  if (!$direction) {
-    my $name = "off";
-    # set the value based on name instead
-    if ($value) {
-      $name = "on";
-    }
-    return $name;
+sub relayControl {
+  my ($relay, $value) = @_;
+  if (!$relay || !$value) {
+    return 0;
   }
-  # translate name to num
-  if ($direction) {
-    my $num = 0;
-    # set the value based on name instead
-    if ($value eq "on") {
-      $num = 1;
-    }
-    return $num;
+  my $relayStatus;
+
+  # write the gpio value using a shell
+  if ($value eq 'on') {
+    `gpio write $relays->{$relay} 1`;
+    $relayStatus = relayStatus($relay);
+  } elsif ($value eq 'off') {
+    `gpio write $relays->{$relay} 0`;
+    $relayStatus = relayStatus($relay);
   }
-  return 0;
+  return $relayStatus;
+}
+
+sub relayStatus {
+  my ($relay) = @_;
+  if (!$relay) {
+    return 0;
+  }
+  my $relayStatusPretty = "off";
+
+  # get relay status
+  my $relayStatus = `gpio read $relays->{$relay}`;
+  chomp $relayStatus;
+
+  # if the relay is true then its "on"
+  if ($relayStatus) {
+    $relayStatusPretty = "on";
+  }
+  return $relayStatusPretty;
 }
 
 # $cron->add_entry("0-40/5,55 3,22 * Jan-Nov Fri", {
@@ -189,7 +196,10 @@ helper startPoolFill => sub {
   my ($self, $duration) = @_;
   my $rachioValue = "{ 'id' : 'c1ec26b1-f514-44d1-bcec-bf46c7bea5c8', 'duration' : $duration }";
   my $rachioStartUrl = 'https://api.rach.io/1/public/zone/start';
-  my $rachioResponse = fetchRachioUrl($rachioStartUrl, $rachioValue);
+  my $rachioResponse = fetchRachioUrl($rachioStartUrl, $rachioStartUrl);
+  if ($rachioResponse) {
+    print Dumper($rachioResponse);
+  }
   return $rachioResponse;
 };
 
@@ -198,9 +208,12 @@ helper startPoolFill => sub {
 # url 'https://api.rach.io/1/public/device/stop_water'
 helper stopPoolFill => sub {
   my ($self) = @_;
-  my $rachioValue = "{ 'id' : '72c57cc8-ce7e-4faa-a99a-1740aa1a2431' }";
+  my $rachioValue = '{ "id" : "72c57cc8-ce7e-4faa-a99a-1740aa1a2431" }';
   my $rachioStopUrl = 'https://api.rach.io/1/public/device/stop_water';
   my $rachioResponse = fetchRachioUrl($rachioStopUrl, $rachioValue);
+  if ($rachioResponse) {
+    print Dumper($rachioResponse);
+  }
   return $rachioResponse;
 };
 
@@ -247,33 +260,16 @@ helper setPumpProgram => sub {
 
 # relay control
 helper toggleRelay => sub {
-  my ($self, $relayName, $value) = @_;
-  my $val = powerNameMap($value, 1);
-
-  # get the relay id by name
-  my $relayID = $relays->{$relayName};
-  my $bcm  = HiPi::Device::GPIO->new();
-  $bcm->export_pin( $relayID );
-  my $pin  = $bcm->get_pin( $relayID );
-  $pin->value($val);
-  my $pinStatus = $pin->value();
-  my $relayStatusName = powerNameMap($pinStatus, 0);
-  return $relayStatusName;
+  my ($self, $relay, $value) = @_;
+  my $relayStatus = relayControl($relay, $value);
+  return $relayStatus;
 };
 
 # relay status
 helper relayStatus => sub {
-  my ($self, $relayName) = @_;
-  my $relayID = $relays->{$relayName};
-  if (!$relayID) {
-    return 0;
-  }
-  my $bcm  = HiPi::Device::GPIO->new();
-  $bcm->export_pin( $relayID );
-  my $pin  = $bcm->get_pin( $relayID );
-  my $pinStatus = $pin->value();
-  my $relayStatusName = powerNameMap($pinStatus, 0);
-  return $relayStatusName ;
+  my ($self, $relay) = @_;
+  my $relayStatus = relayStatus($relay);
+  return $relayStatus ;
 };
 
 
@@ -304,6 +300,21 @@ helper relayStatus => sub {
 #         return;
 #     }
 # };
+
+
+# Power from rainforest
+get '/api/power/incoming' => sub {
+    my $self  = shift;
+    my $pumpID  = $self->stash('id');
+    if (!$pumpID) {
+      return $self->render(json => {error => "missing pump number"});
+    }
+    my $pumpStatus = $self->fetchPumpStatus($pumpID);
+    if (!$pumpStatus) {
+      return $self->render(json => {error => "pump controller unavailable"});
+    }
+    return $self->render(json => {name => $pumpStatus->{$pumpID}->{'name'}, watts => $pumpStatus->{$pumpID}->{'watts'}, rpm => $pumpStatus->{$pumpID}->{'rpm'}, run => $pumpStatus->{$pumpID}->{'run'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program2rpm => $pumpStatus->{$pumpID}->{'program2rpm'}, program3rpm => $pumpStatus->{$pumpID}->{'program3rpm'}, program4rpm => $pumpStatus->{$pumpID}->{'program4rpm'},programRemaining => $pumpStatus->{$pumpID}->{'currentrunning'}->{'remainingduration'}, programRunning => $pumpStatus->{$pumpID}->{'currentrunning'}->{'value'}, programMode => $pumpStatus->{$pumpID}->{'currentrunning'}->{'mode'}});
+};
 
 # pump status
 get '/api/pump/status/:id' => sub {
