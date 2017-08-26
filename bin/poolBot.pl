@@ -42,6 +42,11 @@ sub startup {
   my $self = shift;
   $self->log->info('poolBot Starting Up');
 
+  # lets make sure all our pins are set to low
+  foreach my $pin (keys %{ $relays }) {
+    `gpio export $pin low`;
+  }
+
   # load up any saved schedules
   ## cron entry
   ##
@@ -50,6 +55,8 @@ sub startup {
   # my $entry = "0-59/5 * * * *";
   # $self->cron->add_entry($entry,\&cronDispatch,$pumpID,$program,$duration);
   # $self->cron->run(detach=>1,pid_file=>"/var/run/scheduler.pid");
+
+
 }
 
 # scheduler
