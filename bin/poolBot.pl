@@ -11,6 +11,7 @@ use RocksDB;
 use Log::Log4perl;
 use Data::Dumper;
 use Schedule::Cron;
+use JSON;
 
 my $relays = ();
 my $pumpUrl = "http://10.42.2.19:3000";
@@ -37,34 +38,40 @@ my $log = "";
 
 
 ## Functions
-# startup
+# Startup function
 sub startup {
   my $self = shift;
   $self->log->info('poolBot Starting Up');
 
-  # lets make sure all our pins are set to low
+  # GPIO setup
+  # make sure all pins are set to low
+  $self->log->info('Exporting GPIO pins');
   foreach my $pin (keys %{ $relays }) {
     `gpio export $pin low`;
   }
 
-  # load up any saved schedules
-  ## cron entry
-  ##
+  # lets pull the default schedule for cron
+  $self->log->info('Retrieving stored crontab');
+  my $cronJSON = $self->db->get('crontab');
 
-  # should setup cron here too
-  # my $entry = "0-59/5 * * * *";
-  # $self->cron->add_entry($entry,\&cronDispatch,$pumpID,$program,$duration);
-  # $self->cron->run(detach=>1,pid_file=>"/var/run/scheduler.pid");
-
+  if ($cronJSON)  {
+    my $crontab = decode_json $cronJSON;
+    # load the cron
+    foreach my $cron ( %{ $crontab }) {
+      # $self->cron->add_entry($cron->{'datetime'},\&runSchedule,$cron->{'pump'},$cron->{'program'},$cron->{'duration'});
+    }
+    # run the cron and detach
+    # $self->cron->run(detach=>1,pid_file=>"../log/scheduler.pid");
+  }
 
 }
 
 # scheduler
 sub runSchedule {
   my $args = shift;
-  # $args->{id}
-  # $args->{program}
-  # $args->{duration}
+  my $pump = $args->{pump};
+  my $program = $args->{program};
+  my $duration = $args->{duration};
 
 }
 
@@ -113,10 +120,10 @@ sub relayControl {
 
   # write the gpio value using a shell
   if ($value eq 'on') {
-    `gpio write $relays->{$relay} 1`;
+    `gpio export $relays->{$relay} high`;
     $relayStatus = relayStatus($relay);
   } elsif ($value eq 'off') {
-    `gpio write $relays->{$relay} 0`;
+    `gpio export $relays->{$relay} low`;
     $relayStatus = relayStatus($relay);
   }
   return $relayStatus;
@@ -180,7 +187,7 @@ helper cron => sub {
         return $cron;
     }else{
         $cron = new Schedule::Cron(  sub { print "@_","\n" },
-                                      file  => "poolBot.sched",
+                                      file  => "../etc/poolBot.sched",
                                       eval  => 1);
         return $cron;
     }
