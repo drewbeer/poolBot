@@ -119,10 +119,10 @@ sub relayControl {
 
   # write the gpio value using a shell
   if ($value eq 'on') {
-    `gpio export $relays->{$relay} high`;
+    `/usr/bin/gpio export $relays->{$relay} high`;
     $relayStatus = relayStatus($relay);
   } elsif ($value eq 'off') {
-    `gpio export $relays->{$relay} low`;
+    `/usr/bin/gpio export $relays->{$relay} low`;
     $relayStatus = relayStatus($relay);
   }
   return $relayStatus;
@@ -136,7 +136,7 @@ sub relayStatus {
   my $relayStatusPretty = "off";
 
   # get relay status
-  my $relayStatus = `gpio read $relays->{$relay}`;
+  my $relayStatus = `/usr/bin/gpio read $relays->{$relay}`;
   chomp $relayStatus;
 
   # if the relay is true then its "on"
@@ -267,7 +267,7 @@ helper setPumpProgram => sub {
 # relay control
 helper toggleRelay => sub {
   my ($self, $relay, $value) = @_;
-  $self->log->info('Toggling $relay to $value');
+  $self->log->info("Toggling $relay to $value");
   my $relayStatus = relayControl($relay, $value);
   return $relayStatus;
 };
