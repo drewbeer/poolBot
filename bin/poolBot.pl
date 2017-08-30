@@ -3,11 +3,11 @@
 #
 use Mojolicious::Lite;
 use Mojo::JSON qw(decode_json encode_json);
-use DBI;
 use strict;
 use warnings;
 use DateTime;
 use LWP::Simple qw(!get);
+use RocksDB;
 use Log::Log4perl;
 use Data::Dumper;
 use Schedule::Cron;
@@ -31,7 +31,7 @@ $relays->{'spa'} = 1;
 app->config(poolBot => {listen => ['http://*:3000']});
 
 # Global handle for db connections
-my $dbh = "";
+my $db = "";
 my $cron = "";
 my $log = "";
 
@@ -166,19 +166,12 @@ helper log => sub {
 
 # Create db connection if needed
 helper db => sub {
-    if($dbh){
-        return $dbh;
+    if($db){
+        return $db;
     }else{
-        $dbh = DBI->connect('DBI:mysql:database=poolBot;host=localhost','root','') or die $DBI::errstr;
-        return $dbh;
+        $db = RocksDB->new('../etc/poolBot.db', { create_if_missing => 1 });
+        return $db;
     }
-};
-
-# Disconnect db connection
-helper db_disconnect => sub {
-    my $self = shift;
-    $self->db->disconnect;
-    $dbh = "";
 };
 
 # cron
@@ -409,26 +402,26 @@ get '/api/pump/power/:id/:value' => sub {
 };
 
 # relay control
-get '/api/relay/set/:id/:value' => sub {
+get '/api/relay/set/:name/:value' => sub {
     my $self  = shift;
-    my $relayID  = $self->stash('id');
+    my $relay  = $self->stash('name');
     my $value  = $self->stash('value');
-    if (!$relayID && !$value) {
-      return $self->render(json => {error => "missing relay ID and value"});
+    if (!$relay && !$value) {
+      return $self->render(json => {error => "missing relay and value"});
     }
-    my $relayStatus = $self->toggleRelay($relayID, $value);
-    return $self->render(json => {relay => $relayID, value => $relayStatus});
+    my $relayStatus = $self->toggleRelay($relay, $value);
+    return $self->render(json => {relay => $relay, value => $relayStatus});
 };
 
 # relay control
-get '/api/relay/status/:id' => sub {
+get '/api/relay/status/:name' => sub {
     my $self  = shift;
-    my $relayID  = $self->stash('id');
-    if (!$relayID) {
-      return $self->render(json => {error => "missing relay ID"});
+    my $relay  = $self->stash('name');
+    if (!$relay) {
+      return $self->render(json => {error => "missing relay"});
     }
-    my $relayStatus = $self->relayStatus($relayID);
-    return $self->render(json => {relay => $relayID, value => $relayStatus});
+    my $relayStatus = $self->relayStatus($relay);
+    return $self->render(json => {relay => $relay, value => $relayStatus});
 };
 
 # Start the app
