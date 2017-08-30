@@ -11,7 +11,6 @@ use RocksDB;
 use Log::Log4perl;
 use Data::Dumper;
 use Schedule::Cron;
-use JSON;
 
 my $relays = ();
 my $pumpUrl = "http://10.42.2.19:3000";
@@ -268,6 +267,7 @@ helper setPumpProgram => sub {
 # relay control
 helper toggleRelay => sub {
   my ($self, $relay, $value) = @_;
+  $self->log->info('Toggling $relay to $value');
   my $relayStatus = relayControl($relay, $value);
   return $relayStatus;
 };
