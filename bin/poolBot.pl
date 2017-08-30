@@ -111,7 +111,7 @@ sub fetchRachioUrl {
 };
 
 sub relayControl {
-  my ($relay, $value) = @_;
+  my ($self, $relay, $value) = @_;
   if (!$relay || !$value) {
     return 0;
   }
@@ -119,7 +119,9 @@ sub relayControl {
 
   # write the gpio value using a shell
   if ($value eq 'on') {
-    `/usr/bin/gpio export $relays->{$relay} high`;
+    my $command = "/usr/bin/gpio export $relays->{$relay} high";
+    $self->log->info("gpio command: $command");
+    `$command`;
     $relayStatus = relayStatus($relay);
   } elsif ($value eq 'off') {
     `/usr/bin/gpio export $relays->{$relay} low`;
@@ -268,7 +270,7 @@ helper setPumpProgram => sub {
 helper toggleRelay => sub {
   my ($self, $relay, $value) = @_;
   $self->log->info("Toggling $relay to $value");
-  my $relayStatus = relayControl($relay, $value);
+  my $relayStatus = relayControl($self, $relay, $value);
   return $relayStatus;
 };
 
