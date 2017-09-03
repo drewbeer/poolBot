@@ -119,12 +119,12 @@ sub relayControl {
 
   # write the gpio value using a shell
   if ($value eq 'on') {
-    my $command = "/usr/bin/gpio export $relays->{$relay} high";
+    my $command = "/usr/bin/gpio -g write $relays->{$relay} 1";
     $self->log->info("gpio command: $command");
     `$command`;
     $relayStatus = relayStatus($relay);
   } elsif ($value eq 'off') {
-    `/usr/bin/gpio export $relays->{$relay} low`;
+    `/usr/bin/gpio -g write $relays->{$relay} 0`;
     $relayStatus = relayStatus($relay);
   }
   return $relayStatus;
@@ -138,7 +138,7 @@ sub relayStatus {
   my $relayStatusPretty = "off";
 
   # get relay status
-  my $relayStatus = `/usr/bin/gpio read $relays->{$relay}`;
+  my $relayStatus = `/usr/bin/gpio -g read $relays->{$relay}`;
   chomp $relayStatus;
 
   # if the relay is true then its "on"
