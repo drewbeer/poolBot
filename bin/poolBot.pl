@@ -17,11 +17,11 @@ my $pumpUrl = "http://10.42.2.19:3000";
 my $rachioKey = "4236ff47-df71-4c5d-8520-c4fa9236944d";
 
 # relay map
-$relays->{'valveIn'} = 21;
-$relays->{'ValveOut'} = 7;
-$relays->{'salt'} = 27;
-$relays->{'heater'} = 26;
-$relays->{'spa'} = 1;
+$relays->{'valveIn'} = 5;
+$relays->{'ValveOut'} = 4;
+$relays->{'salt'} = 16;
+$relays->{'heater'} = 12;
+$relays->{'spa'} = 18;
 
 # database scheduling
 
