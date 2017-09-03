@@ -12,11 +12,14 @@ use Log::Log4perl;
 use Data::Dumper;
 use Schedule::Cron;
 
-my $relays = ();
 my $pumpUrl = "http://10.42.2.19:3000";
 my $rachioKey = "4236ff47-df71-4c5d-8520-c4fa9236944d";
 
-# relay map
+# gpio stuff
+my $gpioCMD = '/usr/bin/gpio -g';
+
+# gpio relay map
+my $relays = ();
 $relays->{'valveIn'} = 5;
 $relays->{'ValveOut'} = 4;
 $relays->{'salt'} = 16;
@@ -46,7 +49,7 @@ sub startup {
   # make sure all pins are set to low
   $self->log->info('Exporting GPIO pins');
   foreach my $pin (keys %{ $relays }) {
-    `gpio export $pin low`;
+    `$gpioCMD export $pin low`;
   }
 
   # lets pull the default schedule for cron
@@ -119,7 +122,7 @@ sub relayControl {
 
   # write the gpio value using a shell
   if ($value eq 'on') {
-    my $command = "/usr/bin/gpio -g write $relays->{$relay} 1";
+    my $command = "$gpioCMD write $relays->{$relay} 1";
     $self->log->info("gpio command: $command");
     `$command`;
     $relayStatus = relayStatus($relay);
@@ -138,7 +141,7 @@ sub relayStatus {
   my $relayStatusPretty = "off";
 
   # get relay status
-  my $relayStatus = `/usr/bin/gpio -g read $relays->{$relay}`;
+  my $relayStatus = `$gpioCMD read $relays->{$relay}`;
   chomp $relayStatus;
 
   # if the relay is true then its "on"
