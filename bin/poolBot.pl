@@ -1,19 +1,26 @@
 #!/usr/bin/perl
-# this is the api into jack, he's our leader, sky net can suck it.
+# poolBot, a perl based web api to talk to different things that affect my pool
 #
-use Mojolicious::Lite;
-use Mojo::JSON qw(decode_json encode_json);
+## TODO:
+# health check (salt cannot run without the pump running) should be thread
+# scheduling
+# slack output
+# web status in json
+# settings page
+#
+#
 use strict;
 use warnings;
+use Mojolicious::Lite;
+use Mojo::JSON qw(decode_json encode_json);
 use DateTime;
-use LWP::Simple qw(!get);
 use RocksDB;
-use Log::Log4perl;
 use Data::Dumper;
 use Schedule::Cron;
 
 my $pumpUrl = "http://10.42.2.19:3000";
 my $rachioKey = "4236ff47-df71-4c5d-8520-c4fa9236944d";
+my $listenWebPort = 'http://*:3000';
 
 # gpio stuff
 my $gpioCMD = '/usr/bin/gpio -g';
@@ -26,54 +33,72 @@ $relays->{'salt'} = 16;
 $relays->{'heater'} = 12;
 $relays->{'spa'} = 18;
 
-# database scheduling
-
-# we should load up the cron for any schedules in memory and start them before the api kicks off
-
-# web server listen
-app->config(poolBot => {listen => ['http://*:3000']});
+# # Check title in the background every 10 seconds
+# my $title = 'Got no title yet.';
+# Mojo::IOLoop->recurring(10 => sub {
+#   app->ua->get('http://mojolicious.org' => sub {
+#     my ($ua, $tx) = @_;
+#     $title = $tx->result->dom->at('title')->text;
+#   });
+# });
 
 # Global handle for db connections
+my $poolBot = ();
 my $db = "";
 my $cron = "";
-my $log = "";
 
-
-## Functions
 # Startup function
 sub startup {
   my $self = shift;
-  $self->log->info('poolBot Starting Up');
+  app->log->debug('poolBot Starting Up');
 
   # GPIO setup
   # make sure all pins are set to low
-  $self->log->info('Exporting GPIO pins');
+  app->log->debug('Exporting GPIO pins');
   foreach my $pin (keys %{ $relays }) {
     `$gpioCMD export $pin low`;
   }
 
   # lets pull the default schedule for cron
-  $self->log->info('Retrieving stored crontab');
+  app->log->debug('Retrieving stored crontab');
   my $cronJSON = $self->db->get('crontab');
 
   if ($cronJSON)  {
     my $crontab = decode_json $cronJSON;
     # load the cron
     foreach my $cron ( %{ $crontab }) {
-      # $self->cron->add_entry($cron->{'datetime'},\&runSchedule,$cron->{'pump'},$cron->{'program'},$cron->{'duration'});
+      # $self->cron->add_entry($cron->{'datetime'},\&cronScheduler,$cron->{'pump'},$cron->{'mode'},$cron->{'duration'});
     }
     # run the cron and detach
     # $self->cron->run(detach=>1,pid_file=>"../log/scheduler.pid");
   }
 
+  # now we should startup any threads for background stuff
+
 }
 
-# scheduler
-sub runSchedule {
+# cron details, aka modes
+# when generating cron, it should have two entries.
+# 1. general crontab entry, that is when, and what and how long to run something for
+# 2. details about the specific cron to run
+#   a. pump only, pump and salt, pump and heater, so on.
+#   b. how fast the pump should run
+#   c. how high to let the temp get to on heat functions
+#
+# modes should have a key prefix, like
+# 1. mode_pump_only
+# 2. mode_heat
+# 3. mode_normal_high
+# 4. mode_normal_med
+# 5. mode_normal_low
+sub cronScheduler {
   my $args = shift;
   my $pump = $args->{pump};
-  my $program = $args->{program};
+  my $mode = $args->{mode};
   my $duration = $args->{duration};
+
+  # lets get the specific details of this program
+  my $cronModes = $self->db->get("$mode");
 
 }
 
@@ -93,7 +118,7 @@ sub timeStamp {
 # pass url, and if json should be parsed
 sub fetchUrl {
   my ($url, $isJson) = @_;
-  my $response = LWP::Simple::get($url);
+  my $response = app->ua->get($url);
   if (!$response) {
     return 0;
   }
@@ -123,7 +148,7 @@ sub relayControl {
   # write the gpio value using a shell
   if ($value eq 'on') {
     my $command = "$gpioCMD write $relays->{$relay} 1";
-    $self->log->info("gpio command: $command");
+    app->log->debug("gpio command: $command");
     `$command`;
     $relayStatus = relayStatus($relay);
   } elsif ($value eq 'off') {
@@ -151,15 +176,6 @@ sub relayStatus {
   return $relayStatusPretty;
 }
 
-# $cron->add_entry("0-40/5,55 3,22 * Jan-Nov Fri", {
-#   sub  => \&runSchedule,
-#     args => [ {
-#       id   => 1,
-#       program => 2,
-#       duration => 300
-#     } ],
-#    eval => 0 }
-# );
 
 ## Helpers
 helper log => sub {
@@ -272,7 +288,6 @@ helper setPumpProgram => sub {
 # relay control
 helper toggleRelay => sub {
   my ($self, $relay, $value) = @_;
-  $self->log->info("Toggling $relay to $value");
   my $relayStatus = relayControl($self, $relay, $value);
   return $relayStatus;
 };
@@ -313,128 +328,151 @@ helper relayStatus => sub {
 #     }
 # };
 
+## create forks
+# webFork
+my $webFork = fork();
+# monitoring fork
+my $monFork = fork();
 
-# Power from rainforest
-get '/api/power/incoming' => sub {
-    my $self  = shift;
-    my $pumpID  = $self->stash('id');
-    if (!$pumpID) {
-      return $self->render(json => {error => "missing pump number"});
-    }
-    my $pumpStatus = $self->fetchPumpStatus($pumpID);
-    if (!$pumpStatus) {
-      return $self->render(json => {error => "pump controller unavailable"});
-    }
-    return $self->render(json => {name => $pumpStatus->{$pumpID}->{'name'}, watts => $pumpStatus->{$pumpID}->{'watts'}, rpm => $pumpStatus->{$pumpID}->{'rpm'}, run => $pumpStatus->{$pumpID}->{'run'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program2rpm => $pumpStatus->{$pumpID}->{'program2rpm'}, program3rpm => $pumpStatus->{$pumpID}->{'program3rpm'}, program4rpm => $pumpStatus->{$pumpID}->{'program4rpm'},programRemaining => $pumpStatus->{$pumpID}->{'currentrunning'}->{'remainingduration'}, programRunning => $pumpStatus->{$pumpID}->{'currentrunning'}->{'value'}, programMode => $pumpStatus->{$pumpID}->{'currentrunning'}->{'mode'}});
-};
+# health check
+if ($monFork) { # If this is the child thread
+  app->log->debug('Starting Health Check');
+  while (1) {
+    # check these stats they should return json,
+    # getPumpStatus();
+    # getRelayStatus();
+    #
+    sleep 10;
+  }
+}
 
-# pump status
-get '/api/pump/status/:id' => sub {
-    my $self  = shift;
-    my $pumpID  = $self->stash('id');
-    if (!$pumpID) {
-      return $self->render(json => {error => "missing pump number"});
-    }
-    my $pumpStatus = $self->fetchPumpStatus($pumpID);
-    if (!$pumpStatus) {
-      return $self->render(json => {error => "pump controller unavailable"});
-    }
-    return $self->render(json => {name => $pumpStatus->{$pumpID}->{'name'}, watts => $pumpStatus->{$pumpID}->{'watts'}, rpm => $pumpStatus->{$pumpID}->{'rpm'}, run => $pumpStatus->{$pumpID}->{'run'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program2rpm => $pumpStatus->{$pumpID}->{'program2rpm'}, program3rpm => $pumpStatus->{$pumpID}->{'program3rpm'}, program4rpm => $pumpStatus->{$pumpID}->{'program4rpm'},programRemaining => $pumpStatus->{$pumpID}->{'currentrunning'}->{'remainingduration'}, programRunning => $pumpStatus->{$pumpID}->{'currentrunning'}->{'value'}, programMode => $pumpStatus->{$pumpID}->{'currentrunning'}->{'mode'}});
-};
+# web fork module
+if ($webFork) {
+  # Power from rainforest
+  get '/api/power/incoming' => sub {
+      my $self  = shift;
+      my $pumpID  = $self->stash('id');
+      if (!$pumpID) {
+        return $self->render(json => {error => "missing pump number"});
+      }
+      my $pumpStatus = $self->fetchPumpStatus($pumpID);
+      if (!$pumpStatus) {
+        return $self->render(json => {error => "pump controller unavailable"});
+      }
+      return $self->render(json => {name => $pumpStatus->{$pumpID}->{'name'}, watts => $pumpStatus->{$pumpID}->{'watts'}, rpm => $pumpStatus->{$pumpID}->{'rpm'}, run => $pumpStatus->{$pumpID}->{'run'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program2rpm => $pumpStatus->{$pumpID}->{'program2rpm'}, program3rpm => $pumpStatus->{$pumpID}->{'program3rpm'}, program4rpm => $pumpStatus->{$pumpID}->{'program4rpm'},programRemaining => $pumpStatus->{$pumpID}->{'currentrunning'}->{'remainingduration'}, programRunning => $pumpStatus->{$pumpID}->{'currentrunning'}->{'value'}, programMode => $pumpStatus->{$pumpID}->{'currentrunning'}->{'mode'}});
+  };
 
-# set the pump program.
-get '/api/pump/set/:id/:program/:rpm' => sub {
-    my $self  = shift;
-    my $pumpID  = $self->stash('id');
-    my $program  = $self->stash('program');
-    my $rpm  = $self->stash('rpm');
-    if (!$rpm && !$program && !$pumpID) {
-      return $self->render(json => {error => "missing fields"});
-    }
-    my $pumpResponse = $self->setPumpProgram($pumpID, $program, $rpm);
-    if (!$pumpResponse) {
-      return $self->render(json => {error => "pump controller unavailable"});
-    }
-    return $self->render(json => {pump => $pumpResponse->{'pump'}, program => $pumpResponse->{'program'}, rpm => $pumpResponse->{'speed'}});
-};
+  # pump status
+  get '/api/pump/status/:id' => sub {
+      my $self  = shift;
+      my $pumpID  = $self->stash('id');
+      if (!$pumpID) {
+        return $self->render(json => {error => "missing pump number"});
+      }
+      my $pumpStatus = $self->fetchPumpStatus($pumpID);
+      if (!$pumpStatus) {
+        return $self->render(json => {error => "pump controller unavailable"});
+      }
+      return $self->render(json => {name => $pumpStatus->{$pumpID}->{'name'}, watts => $pumpStatus->{$pumpID}->{'watts'}, rpm => $pumpStatus->{$pumpID}->{'rpm'}, run => $pumpStatus->{$pumpID}->{'run'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program1rpm => $pumpStatus->{$pumpID}->{'program1rpm'}, program2rpm => $pumpStatus->{$pumpID}->{'program2rpm'}, program3rpm => $pumpStatus->{$pumpID}->{'program3rpm'}, program4rpm => $pumpStatus->{$pumpID}->{'program4rpm'},programRemaining => $pumpStatus->{$pumpID}->{'currentrunning'}->{'remainingduration'}, programRunning => $pumpStatus->{$pumpID}->{'currentrunning'}->{'value'}, programMode => $pumpStatus->{$pumpID}->{'currentrunning'}->{'mode'}});
+  };
 
-# set the pump run with duration
-get '/api/pump/run/:id/:program/:duration' => sub {
-    my $self  = shift;
-    my $pumpID  = $self->stash('id');
-    my $program  = $self->stash('program');
-    my $duration  = $self->stash('duration');
-    if (!$duration && !$program && !$pumpID) {
-      return $self->render(json => {error => "missing fields"});
-    }
-    my $pumpResponse = $self->setPumpRun($pumpID, $program, $duration);
-    if (!$pumpResponse) {
-      return $self->render(json => {error => "pump controller unavailable"});
-    }
-    return $self->render(json => {pump => $pumpResponse->{'pump'}, program => $pumpResponse->{'program'}, duration => $pumpResponse->{'duration'}});
-};
+  # set the pump program.
+  get '/api/pump/set/:id/:program/:rpm' => sub {
+      my $self  = shift;
+      my $pumpID  = $self->stash('id');
+      my $program  = $self->stash('program');
+      my $rpm  = $self->stash('rpm');
+      if (!$rpm && !$program && !$pumpID) {
+        return $self->render(json => {error => "missing fields"});
+      }
+      my $pumpResponse = $self->setPumpProgram($pumpID, $program, $rpm);
+      if (!$pumpResponse) {
+        return $self->render(json => {error => "pump controller unavailable"});
+      }
+      return $self->render(json => {pump => $pumpResponse->{'pump'}, program => $pumpResponse->{'program'}, rpm => $pumpResponse->{'speed'}});
+  };
 
-# turn on pool fill
-get '/api/pool/water/on/:duration' => sub {
-    my $self  = shift;
-    my $duration  = $self->stash('duration');
-    if (!$duration) {
-      return $self->render(json => {error => "missing duration"});
-    }
-    my $poolFillResponse = $self->startPoolFill($duration);
-    if (!$poolFillResponse) {
-      return $self->render(json => {error => "rachio not working"});
-    }
-    return $self->render(json => {pump => $poolFillResponse->{'duration'}, power => $poolFillResponse->{'remaining'}});
-};
+  # set the pump run with duration
+  get '/api/pump/run/:id/:program/:duration' => sub {
+      my $self  = shift;
+      my $pumpID  = $self->stash('id');
+      my $program  = $self->stash('program');
+      my $duration  = $self->stash('duration');
+      if (!$duration && !$program && !$pumpID) {
+        return $self->render(json => {error => "missing fields"});
+      }
+      my $pumpResponse = $self->setPumpRun($pumpID, $program, $duration);
+      if (!$pumpResponse) {
+        return $self->render(json => {error => "pump controller unavailable"});
+      }
+      return $self->render(json => {pump => $pumpResponse->{'pump'}, program => $pumpResponse->{'program'}, duration => $pumpResponse->{'duration'}});
+  };
 
-# turn off pool fill
-get '/api/pool/water/off' => sub {
-    my $self  = shift;
-    my $poolFillResponse = $self->stopPoolFill();
-    if (!$poolFillResponse) {
-      return $self->render(json => {error => "rachio not working"});
-    }
-    return $self->render(json => {pump => $poolFillResponse->{'status'}});
-};
+  # turn on pool fill
+  get '/api/pool/water/on/:duration' => sub {
+      my $self  = shift;
+      my $duration  = $self->stash('duration');
+      if (!$duration) {
+        return $self->render(json => {error => "missing duration"});
+      }
+      my $poolFillResponse = $self->startPoolFill($duration);
+      if (!$poolFillResponse) {
+        return $self->render(json => {error => "rachio not working"});
+      }
+      return $self->render(json => {pump => $poolFillResponse->{'duration'}, power => $poolFillResponse->{'remaining'}});
+  };
 
-# pump on or off
-get '/api/pump/power/:id/:value' => sub {
-    my $self  = shift;
-    my $pumpID  = $self->stash('id');
-    my $value  = $self->stash('value');
-    if (!$pumpID && !$value) {
-      return $self->render(json => {error => "missing fields"});
-    }
-    my $pumpResponse = $self->setPumpPower($pumpID, $value);
-    if (!$pumpResponse) {
-      return $self->render(json => {error => "pump controller unavailable"});
-    }
-    return $self->render(json => {pump => $pumpResponse->{'pump'}, power => $pumpResponse->{'power'}});
-};
+  # turn off pool fill
+  get '/api/pool/water/off' => sub {
+      my $self  = shift;
+      my $poolFillResponse = $self->stopPoolFill();
+      if (!$poolFillResponse) {
+        return $self->render(json => {error => "rachio not working"});
+      }
+      return $self->render(json => {pump => $poolFillResponse->{'status'}});
+  };
 
-# relay control
-get '/api/relay/set/:name/:value' => sub {
-    my $self  = shift;
-    my $relay  = $self->stash('name');
-    my $value  = $self->stash('value');
-    if (!$relay && !$value) {
-      return $self->render(json => {error => "missing relay and value"});
-    }
-    my $relayStatus = $self->toggleRelay($relay, $value);
-    return $self->render(json => {relay => $relay, value => $relayStatus});
-};
+  # pump on or off
+  get '/api/pump/power/:id/:value' => sub {
+      my $self  = shift;
+      my $pumpID  = $self->stash('id');
+      my $value  = $self->stash('value');
+      if (!$pumpID && !$value) {
+        return $self->render(json => {error => "missing fields"});
+      }
+      my $pumpResponse = $self->setPumpPower($pumpID, $value);
+      if (!$pumpResponse) {
+        return $self->render(json => {error => "pump controller unavailable"});
+      }
+      return $self->render(json => {pump => $pumpResponse->{'pump'}, power => $pumpResponse->{'power'}});
+  };
 
-# relay control
-get '/api/relay/status/:name' => sub {
-    my $self  = shift;
-    my $relay  = $self->stash('name');
-    if (!$relay) {
-      return $self->render(json => {error => "missing relay"});
-    }
-    my $relayStatus = $self->relayStatus($relay);
-    return $self->render(json => {relay => $relay, value => $relayStatus});
-};
+  # relay control
+  get '/api/relay/set/:name/:value' => sub {
+      my $self  = shift;
+      my $relay  = $self->stash('name');
+      my $value  = $self->stash('value');
+      if (!$relay && !$value) {
+        return $self->render(json => {error => "missing relay and value"});
+      }
+      my $relayStatus = $self->toggleRelay($relay, $value);
+      return $self->render(json => {relay => $relay, value => $relayStatus});
+  };
 
-# Start the app
-app->start;
+  # relay control
+  get '/api/relay/status/:name' => sub {
+      my $self  = shift;
+      my $relay  = $self->stash('name');
+      if (!$relay) {
+        return $self->render(json => {error => "missing relay"});
+      }
+      my $relayStatus = $self->relayStatus($relay);
+      return $self->render(json => {relay => $relay, value => $relayStatus});
+  };
+
+  # Start the app
+  # web server listen
+  app->log->debug('Starting Web Server');
+  app->config(poolBot => {listen => [$listenWebPort]});
+  app->start;
+} # end of web fork
