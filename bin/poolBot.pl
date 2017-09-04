@@ -17,6 +17,7 @@ use DateTime;
 use RocksDB;
 use Data::Dumper;
 use Schedule::Cron;
+use Try::Tiny;
 
 my $pumpUrl = "http://10.42.2.19:3000";
 my $rachioKey = "4236ff47-df71-4c5d-8520-c4fa9236944d";
@@ -124,7 +125,13 @@ sub fetchUrl {
   my $ua = Mojo::UserAgent->new();
   $ua->request_timeout(5);
   my $tx = $ua->get($url);
-  my $res = $tx->result;
+  my $res;
+  try {
+    $res = $tx->result;
+  } catch {
+    app->log->debug('failed to fetch');
+    return 0;
+  };
 
   if ($res->is_success) {
     # if json is enabled
@@ -339,7 +346,7 @@ if ($monFork) { # If this is the child thread
   while (1) {
     my $healthCheck = ();
     # read all the relays
-    app->log->debug('health: Fetching relay status');
+    app->log->debug('health: fetching relay status');
     foreach my $pin (keys %{ $relays }) {
       my $output = `$gpioCMD read $relays->{$pin}`;
       chomp $output;
