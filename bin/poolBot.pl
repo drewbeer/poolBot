@@ -129,7 +129,7 @@ sub fetchUrl {
   try {
     $res = $tx->result;
   } catch {
-    app->log->debug('failed to fetch');
+    app->log->debug("failed to fetch $url");
     $res = 0;
   };
 
@@ -145,6 +145,7 @@ sub fetchUrl {
 
     # is error
     if ($res->is_error) {
+      app->log->debug("failed to fetch $url recieved $res->message");
       return 0;
     }
   }
@@ -346,9 +347,9 @@ my $monFork = fork();
 if ($monFork) { # If this is the child thread
   app->log->debug('Starting Health Check');
   while (1) {
+    app->log->debug('Health check running');
     my $healthCheck = ();
     # read all the relays
-    app->log->debug('health: fetching relay status');
     foreach my $pin (keys %{ $relays }) {
       my $output = `$gpioCMD read $relays->{$pin}`;
       chomp $output;
@@ -356,7 +357,6 @@ if ($monFork) { # If this is the child thread
     }
 
     # read the pump
-    app->log->debug('health: fetching pump status');
     my $pumpResponse = fetchUrl("$pumpUrl/pump", 1);
     if ($pumpResponse) {
       foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
@@ -373,7 +373,6 @@ if ($monFork) { # If this is the child thread
     }
 
     sleep 10;
-    app->log->debug('Health Check ping');
   }
 }
 
