@@ -354,7 +354,7 @@ my $monFork = fork();
 if ($monFork) { # If this is the child thread
   app->log->info('Starting Health Check');
   while (!$redis->get("term")) {
-    app->log->debug("Health check running");
+    app->log->debug("running health check");
     my $healthCheck = ();
     # read all the relays
     foreach my $pin (keys %{ $relays }) {
@@ -375,7 +375,7 @@ if ($monFork) { # If this is the child thread
 
     # if pump is not running, and salt is turn it off
     if ($healthCheck->{'relay'}->{'salt'} && !$healthCheck->{'pump'}->{'rpm'}) {
-      app->log->warn('health: Pump has been turned off, but salt is still on, turning off');
+      app->log->warn('pump may be off, turning off salt');
       relayControl('salt', 'off');
     }
 
