@@ -54,7 +54,7 @@ sub startup {
   app->log->debug('poolBot Starting Up');
 
   # clear the rocksDB term status
-  my $termStatus = $self->db->put('term', 0);
+  $self->db->put('term', 0);
 
   # GPIO setup
   # make sure all pins are set to low
@@ -346,7 +346,7 @@ my $monFork = fork();
 # health check
 if ($monFork) { # If this is the child thread
   app->log->debug('Starting Health Check');
-  while (1) {
+  while (!$db->get('term');) {
     app->log->debug('Health check running');
     my $healthCheck = ();
     # read all the relays
@@ -374,6 +374,7 @@ if ($monFork) { # If this is the child thread
 
     sleep 10;
   }
+  exit;
 }
 
 # webFork
@@ -501,6 +502,18 @@ if ($webFork) {
       }
       my $relayStatus = $self->relayStatus($relay);
       return $self->render(json => {relay => $relay, value => $relayStatus});
+  };
+
+  # exit command
+  get '/quit' => sub {
+    my $c = shift;
+    $c->redirect_to('http://google.com');
+    # update the rocksdb to terminate all threads
+    $db->put('term', 1);
+
+    my $loop = Mojo::IOLoop->singleton;
+    $loop->timer( 1 => sub { exit } );
+    $loop->start unless $loop->is_running; # portability
   };
 
   # Start the app
