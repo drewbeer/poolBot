@@ -313,9 +313,6 @@ helper relayStatus => sub {
 #     }
 # };
 
-## create forks
-# webFork
-my $webFork = fork();
 # monitoring fork
 my $monFork = fork();
 
@@ -330,6 +327,9 @@ if ($monFork) { # If this is the child thread
     sleep 10;
   }
 }
+
+# webFork
+my $webFork = fork();
 
 # web fork module
 if ($webFork) {
