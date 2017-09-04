@@ -130,21 +130,23 @@ sub fetchUrl {
     $res = $tx->result;
   } catch {
     app->log->debug('failed to fetch');
-    return 0;
+    $res = 0;
   };
 
-  if ($res->is_success) {
-    # if json is enabled
-    my $decodedResponse = $res->body;
-    if ($isJson) {
-        $decodedResponse = decode_json($res->body);
+  if ($res) {
+    if ($res->is_success) {
+      # if json is enabled
+      my $decodedResponse = $res->body;
+      if ($isJson) {
+          $decodedResponse = decode_json($res->body);
+      }
+      return $decodedResponse;
     }
-    return $decodedResponse;
-  }
 
-  # is error
-  if ($res->is_error) {
-    return 0;
+    # is error
+    if ($res->is_error) {
+      return 0;
+    }
   }
 
   return 0;
