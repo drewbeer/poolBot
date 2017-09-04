@@ -18,6 +18,7 @@ use RocksDB;
 use Data::Dumper;
 use Schedule::Cron;
 use Try::Tiny;
+use Mojo::Redis2;
 
 # debug
 app->log->level('debug');
@@ -49,10 +50,11 @@ $relays->{'spa'} = 18;
 
 my $poolBot = ();
 my $cron="";
+my $db="";
 
 # setup the db
-my $db = RocksDB->new($dbLocation, { create_if_missing => 1 });
-$db->put('term', 0);
+my $redis = Mojo::Redis2->new;
+$redis->set(term => "0");
 
 # Startup function
 sub startup {
@@ -350,7 +352,7 @@ my $monFork = fork();
 
 # health check
 if ($monFork) { # If this is the child thread
-  my $term = $db->get('term');
+  my $term = $redis->get("term");
   app->log->debug('Starting Health Check | $term');
   while ($term == 0) {
     app->log->debug("Health check running | $term");
@@ -379,7 +381,7 @@ if ($monFork) { # If this is the child thread
     }
 
     sleep 10;
-    $term = $db->get('term');
+    $term = $redis->get("term");
   }
   exit;
 }
@@ -516,7 +518,7 @@ if ($webFork) {
     my $self = shift;
     $self->redirect_to('http://google.com');
     # update the rocksdb to terminate all threads
-    $self->db->put('term', 1);
+    $redis->set(term => "1");
 
     my $loop = Mojo::IOLoop->singleton;
     $loop->timer( 1 => sub { exit } );
