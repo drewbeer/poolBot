@@ -19,9 +19,13 @@ use Data::Dumper;
 use Schedule::Cron;
 use Try::Tiny;
 
+# debug
+app->log->level('debug');
+
 my $pumpUrl = "http://10.42.2.19:3000";
 my $rachioKey = "4236ff47-df71-4c5d-8520-c4fa9236944d";
 my $listenWebPort = 'http://*:3000';
+my $dbLocation = '../etc/poolBot.db';
 
 # gpio stuff
 my $gpioCMD = '/usr/bin/gpio -g';
@@ -45,7 +49,7 @@ $relays->{'spa'} = 18;
 
 # Global handle for db connections
 my $poolBot = ();
-my $db = "";
+my $db = RocksDB->new($dbLocation, { create_if_missing => 1 });
 my $cron = "";
 
 # Startup function
@@ -205,24 +209,24 @@ sub relayStatus {
 
 # Create db connection if needed
 helper db => sub {
-    if($db){
-        return $db;
-    }else{
-        $db = RocksDB->new('../etc/poolBot.db', { create_if_missing => 1 });
-        return $db;
+    if ($db) {
+      return $db;
+    } else {
+      $db = RocksDB->new($dbLocation, { create_if_missing => 1 });
+      return $db;
     }
 };
 
 # cron
 helper cron => sub {
-    if($cron){
-        return $cron;
-    }else{
-        $cron = new Schedule::Cron(  sub { print "@_","\n" },
-                                      file  => "../etc/poolBot.sched",
-                                      eval  => 1);
-        return $cron;
-    }
+  if ($cron) {
+    return $cron;
+  } else {
+    $cron = new Schedule::Cron(  sub { print "@_","\n" },
+                                  file  => "../etc/poolBot.sched",
+                                  eval  => 1);
+    return $cron;
+  }
 };
 
 # rachio helper
@@ -311,13 +315,6 @@ helper relayStatus => sub {
   return $relayStatus ;
 };
 
-# relay status
-helper fetchTermStatus => sub {
-  my ($self) = @_;
-  my $term = $self->db->get('term');
-  return $term ;
-};
-
 
 ## Api Routes
 # # Always check auth token!  Here we validate that every API request
@@ -353,8 +350,7 @@ my $monFork = fork();
 # health check
 if ($monFork) { # If this is the child thread
   app->log->debug('Starting Health Check');
-  my $termStatus = fetchTermStatus();
-  while (!$termStatus) {
+  while (!$db->get('term')) {
     app->log->debug('Health check running');
     my $healthCheck = ();
     # read all the relays
@@ -381,7 +377,6 @@ if ($monFork) { # If this is the child thread
     }
 
     sleep 10;
-    $termStatus = fetchTermStatus();
   }
   exit;
 }
