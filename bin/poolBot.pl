@@ -513,10 +513,10 @@ if ($webFork) {
 
   # exit command
   get '/quit' => sub {
-    my $c = shift;
-    $c->redirect_to('http://google.com');
+    my $self = shift;
+    $self->redirect_to('http://google.com');
     # update the rocksdb to terminate all threads
-    $db->put('term', 1);
+    $self->db->put('term', 1);
 
     my $loop = Mojo::IOLoop->singleton;
     $loop->timer( 1 => sub { exit } );
