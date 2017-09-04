@@ -119,8 +119,9 @@ sub timeStamp {
 sub fetchUrl {
   my ($url, $isJson) = @_;
   my $ua = Mojo::UserAgent->new();
-  $ua->max_redirects(1)->connect_timeout(3)->request_timeout(3);
-  my $res = $ua->get($url)->result;
+  $ua->request_timeout(5);
+  my $tx = $ua->get($url);
+  my $res = $tx->result;
 
   if ($res->is_success) {
     # if json is enabled
