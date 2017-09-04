@@ -13,12 +13,12 @@ use strict;
 use warnings;
 use Mojolicious::Lite;
 use Mojo::JSON qw(decode_json encode_json);
-use DateTime;
-use RocksDB;
-use Data::Dumper;
-use Schedule::Cron;
-use Try::Tiny;
 use Mojo::Redis2;
+use RocksDB;
+use Try::Tiny;
+use DateTime;
+use Schedule::Cron;
+use Data::Dumper;
 
 # debug
 app->log->level('debug');
@@ -373,10 +373,18 @@ if ($monFork) { # If this is the child thread
       $healthCheck->{'pump'}->{'rpm'} = 0;
     }
 
-    # if pump is not running, and salt is turn it off
-    if ($healthCheck->{'relay'}->{'salt'} && !$healthCheck->{'pump'}->{'rpm'}) {
-      app->log->warn('pump may be off, turning off salt');
-      relayControl('salt', 'off');
+    # check to see if the pump is off
+    if (!$healthCheck->{'pump'}->{'rpm'}) {
+      # turn off salt if its on
+      if ($healthCheck->{'relay'}->{'salt'}) {
+        app->log->warn('pump may be off, turning off salt');
+        relayControl('salt', 'off');
+      }
+      # turn off heater if its on
+      if ($healthCheck->{'relay'}->{'heater'}) {
+        app->log->warn('pump may be off, turning off heater');
+        relayControl('heater', 'off');
+      }
     }
 
     sleep 10;
