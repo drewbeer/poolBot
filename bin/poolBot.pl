@@ -48,6 +48,7 @@ $relays->{'spa'} = 18;
 # });
 
 my $poolBot = ();
+my $cron="";
 
 # setup the db
 my $db = RocksDB->new($dbLocation, { create_if_missing => 1 });
