@@ -56,7 +56,7 @@ sub startup {
   # make sure all pins are set to low
   app->log->debug('Exporting GPIO pins');
   foreach my $pin (keys %{ $relays }) {
-    `$gpioCMD export $pin low`;
+    `$gpioCMD export $relays->{$pin} low`;
   }
 
   # lets pull the default schedule for cron
@@ -118,7 +118,9 @@ sub timeStamp {
 # pass url, and if json should be parsed
 sub fetchUrl {
   my ($url, $isJson) = @_;
-  my $response = app->ua->get($url);
+  my $ua = Mojo::UserAgent->new();
+  $ua->max_redirects(1)->connect_timeout(3)->request_timeout(3);
+  my $response = $ua->get($url);
   if (!$response) {
     return 0;
   }
@@ -139,7 +141,7 @@ sub fetchRachioUrl {
 };
 
 sub relayControl {
-  my ($self, $relay, $value) = @_;
+  my ($relay, $value) = @_;
   if (!$relay || !$value) {
     return 0;
   }
@@ -273,7 +275,7 @@ helper setPumpProgram => sub {
 # relay control
 helper toggleRelay => sub {
   my ($self, $relay, $value) = @_;
-  my $relayStatus = relayControl($self, $relay, $value);
+  my $relayStatus = relayControl($relay, $value);
   return $relayStatus;
 };
 
@@ -320,11 +322,35 @@ my $monFork = fork();
 if ($monFork) { # If this is the child thread
   app->log->debug('Starting Health Check');
   while (1) {
-    # check these stats they should return json,
-    # getPumpStatus();
-    # getRelayStatus();
-    #
+    my $healthCheck = ();
+
+    # read all the relays
+    app->log->debug('Fetching relay status');
+    foreach my $pin (keys %{ $relays }) {
+      my $output = `$gpioCMD read $relays->{$pin}`;
+      chomp $output;
+      $healthCheck->{'relay'}->{$pin} = $output;
+    }
+
+    # read the pump
+    app->log->debug('fetching pump status');
+    my $pumpResponse = fetchUrl("$pumpUrl/pump");
+    if ($pumpResponse) {
+      foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
+        $healthCheck->{'pump'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
+      }
+    } else {
+      $healthCheck->{'pump'}->{'rpm'} = 0;
+    }
+
+    # if pump is not running, and salt is turn it off
+    if ($healthCheck->{'relay'}->{'salt'} && !$healthCheck->{'pump'}->{'rpm'}) {
+      app->log->debug('Pump has been turned off, but salt is still on, turning off');
+      relayControl('salt', 'off');
+    }
+
     sleep 10;
+    app->log->debug('Health Check ping');
   }
 }
 
