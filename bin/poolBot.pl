@@ -311,6 +311,13 @@ helper relayStatus => sub {
   return $relayStatus ;
 };
 
+# relay status
+helper fetchTermStatus => sub {
+  my ($self) = @_;
+  my $term = $self->db->get('term');
+  return $term ;
+};
+
 
 ## Api Routes
 # # Always check auth token!  Here we validate that every API request
@@ -346,7 +353,8 @@ my $monFork = fork();
 # health check
 if ($monFork) { # If this is the child thread
   app->log->debug('Starting Health Check');
-  while (!$db->get('term')) {
+  my $termStatus = fetchTermStatus();
+  while (!$termStatus) {
     app->log->debug('Health check running');
     my $healthCheck = ();
     # read all the relays
@@ -373,6 +381,7 @@ if ($monFork) { # If this is the child thread
     }
 
     sleep 10;
+    $termStatus = fetchTermStatus();
   }
   exit;
 }
