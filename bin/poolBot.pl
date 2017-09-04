@@ -67,7 +67,7 @@ sub startup {
     my $crontab = decode_json $cronJSON;
     # load the cron
     foreach my $cron ( %{ $crontab }) {
-      # $self->cron->add_entry($cron->{'datetime'},\&cronScheduler,$cron->{'pump'},$cron->{'mode'},$cron->{'duration'});
+      # $self->cron->add_entry($cron->{'datetime'},\&cronScheduler,$self,$cron->{'mode'},$cron->{'duration'});
     }
     # run the cron and detach
     # $self->cron->run(detach=>1,pid_file=>"../log/scheduler.pid");
@@ -93,7 +93,7 @@ sub startup {
 # 5. mode_normal_low
 sub cronScheduler {
   my $args = shift;
-  my $pump = $args->{pump};
+  my $self = $args->{self};
   my $mode = $args->{mode};
   my $duration = $args->{duration};
 
