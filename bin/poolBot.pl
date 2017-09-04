@@ -59,19 +59,19 @@ $redis->set(term => "0");
 # Startup function
 sub startup {
   my $self = shift;
-  app->log->debug('poolBot Starting Up');
+  app->log->info('poolBot Starting Up');
 
   # clear the rocksDB term status
 
   # GPIO setup
   # make sure all pins are set to low
-  app->log->debug('Exporting GPIO pins');
+  app->log->info('Setting replay pins');
   foreach my $pin (keys %{ $relays }) {
     `$gpioCMD export $relays->{$pin} low`;
   }
 
   # lets pull the default schedule for cron
-  app->log->debug('Retrieving stored crontab');
+  app->log->fino('Retrieving stored crontab');
   my $cronJSON = $self->db->get('crontab');
 
   if ($cronJSON)  {
@@ -136,7 +136,7 @@ sub fetchUrl {
   try {
     $res = $tx->result;
   } catch {
-    app->log->debug("failed to fetch $url");
+    app->log->error("failed to fetch $url");
     $res = 0;
   };
 
@@ -152,7 +152,7 @@ sub fetchUrl {
 
     # is error
     if ($res->is_error) {
-      app->log->debug("failed to fetch $url recieved $res->message");
+      app->log->error("failed to fetch $url recieved $res->message");
       return 0;
     }
   }
@@ -352,8 +352,7 @@ my $monFork = fork();
 
 # health check
 if ($monFork) { # If this is the child thread
-  my $term = $redis->get("term");
-  app->log->debug('Starting Health Check');
+  app->log->info('Starting Health Check');
   while (!$redis->get("term")) {
     app->log->debug("Health check running");
     my $healthCheck = ();
@@ -376,12 +375,11 @@ if ($monFork) { # If this is the child thread
 
     # if pump is not running, and salt is turn it off
     if ($healthCheck->{'relay'}->{'salt'} && !$healthCheck->{'pump'}->{'rpm'}) {
-      app->log->debug('health: Pump has been turned off, but salt is still on, turning off');
+      app->log->warn('health: Pump has been turned off, but salt is still on, turning off');
       relayControl('salt', 'off');
     }
 
     sleep 10;
-    $term = $redis->get("term");
   }
   exit;
 }
@@ -527,7 +525,7 @@ if ($webFork) {
 
   # Start the app
   # web server listen
-  app->log->debug('Starting Web Server');
+  app->log->info('Starting Web Server');
   app->config(poolBot => {listen => [$listenWebPort]});
   app->start;
 } # end of web fork
