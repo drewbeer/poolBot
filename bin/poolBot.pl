@@ -47,10 +47,11 @@ $relays->{'spa'} = 18;
 #   });
 # });
 
-# Global handle for db connections
 my $poolBot = ();
+
+# setup the db
 my $db = RocksDB->new($dbLocation, { create_if_missing => 1 });
-my $cron = "";
+$db->put('term', 0);
 
 # Startup function
 sub startup {
@@ -58,7 +59,6 @@ sub startup {
   app->log->debug('poolBot Starting Up');
 
   # clear the rocksDB term status
-  $self->db->put('term', 0);
 
   # GPIO setup
   # make sure all pins are set to low
@@ -349,9 +349,9 @@ my $monFork = fork();
 
 # health check
 if ($monFork) { # If this is the child thread
-  app->log->debug('Starting Health Check');
   my $term = $db->get('term');
-  while (!$term) {
+  app->log->debug('Starting Health Check | $term');
+  while ($term == 0) {
     app->log->debug("Health check running | $term");
     my $healthCheck = ();
     # read all the relays
