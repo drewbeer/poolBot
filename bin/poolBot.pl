@@ -176,21 +176,6 @@ sub relayStatus {
   return $relayStatusPretty;
 }
 
-
-## Helpers
-helper log => sub {
-    if ($log) {
-      return $log;
-    } else {
-      # log file setup
-      Log::Log4perl->init("../etc/poolBot.log.conf");
-
-      # logging setup
-      $log = Log::Log4perl->get_logger("poolBot");
-      return $log;
-    }
-};
-
 # Create db connection if needed
 helper db => sub {
     if($db){
