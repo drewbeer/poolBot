@@ -350,8 +350,9 @@ my $monFork = fork();
 # health check
 if ($monFork) { # If this is the child thread
   app->log->debug('Starting Health Check');
-  while (!$db->get('term')) {
-    app->log->debug('Health check running');
+  my $term = $db->get('term');
+  while (!$term) {
+    app->log->debug("Health check running | $term");
     my $healthCheck = ();
     # read all the relays
     foreach my $pin (keys %{ $relays }) {
@@ -377,6 +378,7 @@ if ($monFork) { # If this is the child thread
     }
 
     sleep 10;
+    $term = $db->get('term');
   }
   exit;
 }
