@@ -120,12 +120,23 @@ sub fetchUrl {
   my ($url, $isJson) = @_;
   my $ua = Mojo::UserAgent->new();
   $ua->max_redirects(1)->connect_timeout(3)->request_timeout(3);
-  my $response = $ua->get($url);
-  if (!$response) {
+  my $res = $ua->get($url)->result;
+
+  if ($res->is_success) {
+    # if json is enabled
+    my $decodedResponse = $res->body;
+    if ($isJson) {
+        $decodedResponse = decode_json($res->body);
+    }
+    return $decodedResponse;
+  }
+
+  # is error
+  if ($res->is_error) {
     return 0;
   }
-  my $decodedResponse = decode_json($response);
-  return $decodedResponse;
+
+  return 0;
 };
 
 # fetch the rachio url
@@ -237,7 +248,7 @@ helper fetchPumpStatus => sub {
   my $pumpStatus = ();
   # fetch the pump status and only one since thats all we have
   my $pumpStatusUrl = "$pumpUrl/pump";
-  my $pumpResponse = fetchUrl($pumpStatusUrl);
+  my $pumpResponse = fetchUrl($pumpStatusUrl, 1);
   if ($pumpResponse) {
     foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
       $pumpStatus->{'1'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
@@ -251,7 +262,7 @@ helper setPumpRun => sub {
   my ($self, $pumpID, $program, $duration) = @_;
   # fetch the pump status and only one since thats all we have
   my $pumpRunCMD = "$pumpUrl/pumpCommand/run/pump/$pumpID/program/$program/duration/$duration";
-  my $pumpResponse = fetchUrl($pumpRunCMD);
+  my $pumpResponse = fetchUrl($pumpRunCMD,1);
   return $pumpResponse;
 };
 
@@ -259,7 +270,7 @@ helper setPumpRun => sub {
 helper setPumpPower => sub {
   my ($self, $pumpID, $value) = @_;
   my $pumpRunCMD = "$pumpUrl/pumpCommand/$value/pump/$pumpID";
-  my $pumpResponse = fetchUrl($pumpRunCMD);
+  my $pumpResponse = fetchUrl($pumpRunCMD,1);
   return $pumpResponse;
 };
 
@@ -268,7 +279,7 @@ helper setPumpProgram => sub {
   my ($self, $pumpID, $program, $rpm) = @_;
   # fetch the pump status and only one since thats all we have
   my $pumpProgramCMD = "$pumpUrl/pumpCommand/save/pump/$pumpID/program/$program/rpm/$rpm";
-  my $pumpResponse = fetchUrl($pumpProgramCMD);
+  my $pumpResponse = fetchUrl($pumpProgramCMD,1);
   return $pumpResponse;
 };
 
@@ -325,7 +336,7 @@ if ($monFork) { # If this is the child thread
     my $healthCheck = ();
 
     # read all the relays
-    app->log->debug('Fetching relay status');
+    app->log->debug('health: Fetching relay status');
     foreach my $pin (keys %{ $relays }) {
       my $output = `$gpioCMD read $relays->{$pin}`;
       chomp $output;
@@ -333,8 +344,8 @@ if ($monFork) { # If this is the child thread
     }
 
     # read the pump
-    app->log->debug('fetching pump status');
-    my $pumpResponse = fetchUrl("$pumpUrl/pump");
+    app->log->debug('health: fetching pump status');
+    my $pumpResponse = fetchUrl("$pumpUrl/pump", 1);
     if ($pumpResponse) {
       foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
         $healthCheck->{'pump'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
@@ -345,7 +356,7 @@ if ($monFork) { # If this is the child thread
 
     # if pump is not running, and salt is turn it off
     if ($healthCheck->{'relay'}->{'salt'} && !$healthCheck->{'pump'}->{'rpm'}) {
-      app->log->debug('Pump has been turned off, but salt is still on, turning off');
+      app->log->debug('health: Pump has been turned off, but salt is still on, turning off');
       relayControl('salt', 'off');
     }
 
