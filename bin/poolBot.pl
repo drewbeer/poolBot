@@ -52,6 +52,9 @@ sub startup {
   my $self = shift;
   app->log->debug('poolBot Starting Up');
 
+  # clear the rocksDB term status
+  my $termStatus = $self->db->put('term', 0);
+
   # GPIO setup
   # make sure all pins are set to low
   app->log->debug('Exporting GPIO pins');
@@ -335,7 +338,6 @@ if ($monFork) { # If this is the child thread
   app->log->debug('Starting Health Check');
   while (1) {
     my $healthCheck = ();
-
     # read all the relays
     app->log->debug('health: Fetching relay status');
     foreach my $pin (keys %{ $relays }) {
