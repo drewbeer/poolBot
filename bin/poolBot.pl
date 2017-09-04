@@ -346,7 +346,7 @@ my $monFork = fork();
 # health check
 if ($monFork) { # If this is the child thread
   app->log->debug('Starting Health Check');
-  while (!$db->get('term');) {
+  while (!$db->get('term')) {
     app->log->debug('Health check running');
     my $healthCheck = ();
     # read all the relays
