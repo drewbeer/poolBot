@@ -353,9 +353,9 @@ my $monFork = fork();
 # health check
 if ($monFork) { # If this is the child thread
   my $term = $redis->get("term");
-  app->log->debug('Starting Health Check | $term');
-  while ($term == 0) {
-    app->log->debug("Health check running | $term");
+  app->log->debug('Starting Health Check');
+  while (!$redis->get("term")) {
+    app->log->debug("Health check running");
     my $healthCheck = ();
     # read all the relays
     foreach my $pin (keys %{ $relays }) {
