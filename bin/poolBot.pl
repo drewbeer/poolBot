@@ -369,6 +369,7 @@ if ($monFork) { # If this is the child thread
       foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
         $healthCheck->{'pump'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
       }
+      app->log->warn('pump is running at $healthCheck->{'pump'}->{'rpm'} rpms');
     } else {
       $healthCheck->{'pump'}->{'rpm'} = 0;
     }
