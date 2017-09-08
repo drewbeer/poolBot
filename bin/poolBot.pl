@@ -115,7 +115,7 @@ sub cronScheduler {
 
 # monitor fork for handling the health check and such
 sub monFork {
-  app->log->info('Starting Health Check');
+  app->log->info('monFork: Starting Health Check');
   while (!$redis->get("term")) {
     app->log->debug("running health check");
     my $healthCheck = ();
@@ -132,7 +132,7 @@ sub monFork {
       foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
         $healthCheck->{'pump'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
       }
-      app->log->warn("pump is running at $healthCheck->{'pump'}->{'rpm'} rpms");
+      app->log->debug("monFork: pump is running at $healthCheck->{'pump'}->{'rpm'} rpms");
     } else {
       $healthCheck->{'pump'}->{'rpm'} = 0;
     }
@@ -141,12 +141,12 @@ sub monFork {
     if (!$healthCheck->{'pump'}->{'rpm'}) {
       # turn off salt if its on
       if ($healthCheck->{'relay'}->{'salt'}) {
-        app->log->warn('pump may be off, turning off salt');
+        app->log->warn('monFork: pump may be off, turning off salt');
         relayControl('salt', 'off');
       }
       # turn off heater if its on
       if ($healthCheck->{'relay'}->{'heater'}) {
-        app->log->warn('pump may be off, turning off heater');
+        app->log->warn('monFork: pump may be off, turning off heater');
         relayControl('heater', 'off');
       }
     }
