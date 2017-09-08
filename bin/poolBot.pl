@@ -113,6 +113,49 @@ sub cronScheduler {
 
 }
 
+# monitor fork for handling the health check and such
+sub monFork {
+  app->log->info('Starting Health Check');
+  while (!$redis->get("term")) {
+    app->log->debug("running health check");
+    my $healthCheck = ();
+    # read all the relays
+    foreach my $pin (keys %{ $relays }) {
+      my $output = `$gpioCMD read $relays->{$pin}`;
+      chomp $output;
+      $healthCheck->{'relay'}->{$pin} = $output;
+    }
+
+    # read the pump
+    my $pumpResponse = fetchUrl("$pumpUrl/pump", 1);
+    if ($pumpResponse) {
+      foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
+        $healthCheck->{'pump'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
+      }
+      app->log->warn("pump is running at $healthCheck->{'pump'}->{'rpm'} rpms");
+    } else {
+      $healthCheck->{'pump'}->{'rpm'} = 0;
+    }
+
+    # check to see if the pump is off
+    if (!$healthCheck->{'pump'}->{'rpm'}) {
+      # turn off salt if its on
+      if ($healthCheck->{'relay'}->{'salt'}) {
+        app->log->warn('pump may be off, turning off salt');
+        relayControl('salt', 'off');
+      }
+      # turn off heater if its on
+      if ($healthCheck->{'relay'}->{'heater'}) {
+        app->log->warn('pump may be off, turning off heater');
+        relayControl('heater', 'off');
+      }
+    }
+
+    sleep 10;
+  }
+  return;
+}
+
 # generate timestamp data
 sub timeStamp {
 	my $self = shift;
@@ -350,47 +393,8 @@ helper relayStatus => sub {
 # monitoring fork
 my $monFork = fork();
 
-# health check
-if ($monFork) { # If this is the child thread
-  app->log->info('Starting Health Check');
-  while (!$redis->get("term")) {
-    app->log->debug("running health check");
-    my $healthCheck = ();
-    # read all the relays
-    foreach my $pin (keys %{ $relays }) {
-      my $output = `$gpioCMD read $relays->{$pin}`;
-      chomp $output;
-      $healthCheck->{'relay'}->{$pin} = $output;
-    }
-
-    # read the pump
-    my $pumpResponse = fetchUrl("$pumpUrl/pump", 1);
-    if ($pumpResponse) {
-      foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
-        $healthCheck->{'pump'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
-      }
-      app->log->warn('pump is running at $healthCheck->{'pump'}->{'rpm'} rpms');
-    } else {
-      $healthCheck->{'pump'}->{'rpm'} = 0;
-    }
-
-    # check to see if the pump is off
-    if (!$healthCheck->{'pump'}->{'rpm'}) {
-      # turn off salt if its on
-      if ($healthCheck->{'relay'}->{'salt'}) {
-        app->log->warn('pump may be off, turning off salt');
-        relayControl('salt', 'off');
-      }
-      # turn off heater if its on
-      if ($healthCheck->{'relay'}->{'heater'}) {
-        app->log->warn('pump may be off, turning off heater');
-        relayControl('heater', 'off');
-      }
-    }
-
-    sleep 10;
-  }
-  exit;
+if ($monFork) {
+  monFork();
 }
 
 # webFork
