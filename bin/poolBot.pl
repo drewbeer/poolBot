@@ -161,15 +161,19 @@ sub monFork {
       }
       # push to redis
       my $healthJson = encode_json $healthCheck;
-      $redis->set(pumpStatus => $healthJson);
-      app->log->debug("monFork: pump is running at $healthCheck->{'pump'}->{'rpm'} rpms");
+      $redis->set(systemStatus => $healthJson);
     } else {
-      $redis->set(pumpStatus => '0');
+      $redis->set(systemStatus => '0');
       $healthCheck->{'pump'}->{'rpm'} = 0;
     }
 
-    # check to see if the pump is off
-    if (!$healthCheck->{'pump'}->{'rpm'}) {
+    # check if the pump is running, and what not.
+    if ($healthCheck->{'pump'}->{'currentrunning'}->{'mode'} ne 'off') {
+      # status log
+      my $statusMessage = qq(monFork: Pump is running $healthCheck->{'pump'}->{'currentrunning'}->{'mode'} at $healthCheck->{'pump'}->{'rpm'} using $healthCheck->{'pump'}->{'watts'}, with $healthCheck->{'pump'}->{'currentrunning'}->{'remainingduration'} minutes remaining);
+      app->log->debug($statusMessage);
+
+      ## do the health check
       # turn off salt if its on
       if ($healthCheck->{'relay'}->{'salt'}) {
         app->log->warn('monFork: pump may be off, turning off salt');
@@ -180,6 +184,9 @@ sub monFork {
         app->log->warn('monFork: pump may be off, turning off heater');
         relayControl('heater', 'off');
       }
+    } else {
+      my $statusMessage = qq(monFork: Pump is $healthCheck->{'pump'}->{'currentrunning'}->{'mode'});
+      app->log->debug($statusMessage);
     }
 
     sleep 5;
@@ -340,9 +347,9 @@ helper stopPoolFill => sub {
 # pump status
 helper fetchPumpStatus => sub {
   my $self = shift;
-  my $statusPump = $redis->get("pumpStatus");
+  my $statusPump = $redis->get("systemStatus");
   my $pumpStatus = decode_json $statusPump;
-  return $pumpStatus;
+  return $pumpStatus->{'pump'};
 };
 
 # pump run
