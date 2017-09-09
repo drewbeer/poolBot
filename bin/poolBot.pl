@@ -158,13 +158,13 @@ sub monFork {
       foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
         $healthCheck->{'pump'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
       }
-      # push to redis
-      my $healthJson = encode_json $healthCheck;
-      $redis->set(systemStatus => $healthJson);
     } else {
-      $redis->set(systemStatus => '0');
-      $healthCheck->{'pump'}->{'rpm'} = 0;
+        $healthCheck->{'pump'} = 0;
     }
+
+    # populate redis with whatever we have
+    my $systemStatus = encode_json $healthCheck;
+    $redis->set(systemStatus => $systemStatus);
 
     # check if the pump is running, and what not.
     if ($healthCheck->{'pump'}->{'currentrunning'}->{'mode'} ne 'off') {
