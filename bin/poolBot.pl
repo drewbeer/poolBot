@@ -143,7 +143,6 @@ sub statsFork {
 sub monFork {
   app->log->info('monFork: Starting Health Check');
   while (!$redis->get("term")) {
-    app->log->debug("running health check");
     my $healthCheck = ();
     # read all the relays
     foreach my $pin (keys %{ $relays }) {
