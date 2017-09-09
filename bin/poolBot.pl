@@ -2,6 +2,7 @@
 # poolBot, a perl based web api to talk to different things that affect my pool
 #
 ## TODO:
+# OMG OMG OMG https://metacpan.org/pod/OAuth::Cmdline::Smartthings
 # health check (salt cannot run without the pump running) should be thread
 # scheduling
 # slack output
@@ -113,6 +114,31 @@ sub cronScheduler {
 
 }
 
+# stats to prometheus
+sub statsFork {
+  app->log->info('statsFork: Starting Stats fork');
+  # my $prometheus = Net::Prometheus->new;
+  #
+  # # Register the metrics
+  #
+  # my $group = $prometheus->new_metricgroup( namespace => "poolBot" );
+  #
+  # my $send_failures = $group->new_counter(
+  #    name => "send_failures_total",
+  #    help => "Count of send attempts that never succeed",
+  # );
+  #
+  # my $send_rtt_histogram = $group->new_histogram(
+  #    name => "send_rtt_seconds",
+  #    help => "Distribution of send round-trip time",
+  #    buckets => $BUCKETS,
+  # );
+
+  while (!$redis->get("term")) {
+
+    sleep 10;
+  }
+}
 # monitor fork for handling the health check and such
 sub monFork {
   app->log->info('monFork: Starting Health Check');
@@ -126,14 +152,19 @@ sub monFork {
       $healthCheck->{'relay'}->{$pin} = $output;
     }
 
+    # need to be able to send these metrics to prometheius
     # read the pump
     my $pumpResponse = fetchUrl("$pumpUrl/pump", 1);
     if ($pumpResponse) {
       foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
         $healthCheck->{'pump'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
       }
+      # push to redis
+      my $healthJson = encode_json $healthCheck;
+      $redis->set(pumpStatus => $healthJson);
       app->log->debug("monFork: pump is running at $healthCheck->{'pump'}->{'rpm'} rpms");
     } else {
+      $redis->set(pumpStatus => '0');
       $healthCheck->{'pump'}->{'rpm'} = 0;
     }
 
@@ -151,7 +182,7 @@ sub monFork {
       }
     }
 
-    sleep 10;
+    sleep 5;
   }
   return;
 }
@@ -309,15 +340,8 @@ helper stopPoolFill => sub {
 # pump status
 helper fetchPumpStatus => sub {
   my $self = shift;
-  my $pumpStatus = ();
-  # fetch the pump status and only one since thats all we have
-  my $pumpStatusUrl = "$pumpUrl/pump";
-  my $pumpResponse = fetchUrl($pumpStatusUrl, 1);
-  if ($pumpResponse) {
-    foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
-      $pumpStatus->{'1'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
-    }
-  }
+  my $statusPump = $redis->get("pumpStatus");
+  my $pumpStatus = decode_json $statusPump;
   return $pumpStatus;
 };
 
