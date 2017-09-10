@@ -151,7 +151,7 @@ sub statsFork {
     $pumpDuration->set( $systemStatus->{'pump'}->{'currentrunning'}->{'duration'} );
 
     # lets update redis so that it can be scraped
-    $promOutput = $prometheus->render;
+    my $promOutput = $prometheus->render;
     $redis->set(stats => $promOutput);
     sleep 10;
   }
