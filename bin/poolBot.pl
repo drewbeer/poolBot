@@ -20,6 +20,7 @@ use Try::Tiny;
 use DateTime;
 use Schedule::Cron;
 use Data::Dumper;
+use Net::Prometheus;
 
 # debug
 app->log->level('debug');
