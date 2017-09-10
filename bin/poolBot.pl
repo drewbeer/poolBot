@@ -205,7 +205,7 @@ sub monFork {
       }
     } else {
       # pump is running
-      $statusMessage = qq(monFork: Pump is running $healthCheck->{'pump'}->{'currentrunning'}->{'mode'} at $healthCheck->{'pump'}->{'rpm'} using $healthCheck->{'pump'}->{'watts'}, with $healthCheck->{'pump'}->{'currentrunning'}->{'remainingduration'} minutes remaining);
+      $statusMessage = qq(monFork: Pump is running $healthCheck->{'pump'}->{'currentrunning'}->{'mode'} at $healthCheck->{'pump'}->{'rpm'} using $healthCheck->{'pump'}->{'watts'} watts, with $healthCheck->{'pump'}->{'currentrunning'}->{'remainingduration'} minutes remaining);
     }
 
     app->log->debug($statusMessage);
@@ -464,6 +464,13 @@ my $monFork = fork();
 
 if ($monFork) {
   monFork();
+}
+
+# stats fork
+my $statsFork = fork();
+
+if ($statsFork) {
+  statsFork();
 }
 
 # webFork
