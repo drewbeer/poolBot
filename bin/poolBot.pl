@@ -111,7 +111,7 @@ sub cronScheduler {
   my $duration = $args->{duration};
 
   # lets get the specific details of this program
-  my $cronModes = $self->db->get("$mode");
+  my $cronModes = $self->db->get($mode);
 
 }
 
@@ -605,7 +605,6 @@ if ($webFork) {
   get '/quit' => sub {
     my $self = shift;
     $self->redirect_to('http://google.com');
-    # update the rocksdb to terminate all threads
     $redis->set(term => "1");
 
     my $loop = Mojo::IOLoop->singleton;
@@ -616,7 +615,8 @@ if ($webFork) {
   # metrics for prometheus
   get '/metrics' => sub {
     my $self = shift;
-    $self->redirect_to('http://google.com');
+    my $statsData = $redis->get{'stats'}
+    return $self->render(text => $statsData);
   };
 
   # Start the app
