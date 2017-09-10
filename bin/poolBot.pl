@@ -282,7 +282,7 @@ sub relayControl {
 
   # before we allow toggles we should have some limits
   my $systemStatus = systemStatus();
-  if ($systemStatus->{'pump'}->{'currentrunning'}->{'mode'} eq 'off' || $value eq 'on') {
+  if (($systemStatus->{'pump'}->{'currentrunning'}->{'mode'} eq 'off') && ($value eq 'on')) {
     if ($relay eq 'heater' || $relay eq 'salt') {
       app->log->warn("can't enable $relay, pump is $systemStatus->{'pump'}->{'currentrunning'}->{'mode'}");
       return 0;
