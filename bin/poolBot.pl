@@ -186,10 +186,11 @@ sub monFork {
     my $systemStatus = encode_json $healthCheck;
     $redis->set(systemStatus => $systemStatus);
 
+    my $statusMessage = "";
     # check if the pump is running, and what not.
     if ($healthCheck->{'pump'}->{'currentrunning'}->{'mode'} eq 'off') {
       # status log
-      my $statusMessage = qq(monFork: Pump is $healthCheck->{'pump'}->{'currentrunning'}->{'mode'});
+      $statusMessage = qq(monFork: Pump is $healthCheck->{'pump'}->{'currentrunning'}->{'mode'});
 
       ## do the health check
       # turn off salt if its on
@@ -204,7 +205,7 @@ sub monFork {
       }
     } else {
       # pump is running
-      my $statusMessage = qq(monFork: Pump is running $healthCheck->{'pump'}->{'currentrunning'}->{'mode'} at $healthCheck->{'pump'}->{'rpm'} using $healthCheck->{'pump'}->{'watts'}, with $healthCheck->{'pump'}->{'currentrunning'}->{'remainingduration'} minutes remaining);
+      $statusMessage = qq(monFork: Pump is running $healthCheck->{'pump'}->{'currentrunning'}->{'mode'} at $healthCheck->{'pump'}->{'rpm'} using $healthCheck->{'pump'}->{'watts'}, with $healthCheck->{'pump'}->{'currentrunning'}->{'remainingduration'} minutes remaining);
     }
 
     app->log->debug($statusMessage);
