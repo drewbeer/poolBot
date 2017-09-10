@@ -615,7 +615,7 @@ if ($webFork) {
   # metrics for prometheus
   get '/metrics' => sub {
     my $self = shift;
-    my $statsData = $redis->get{'stats'};
+    my $statsData = $redis->get('stats');
     return $self->render(text => $statsData);
   };
 
