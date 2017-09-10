@@ -116,29 +116,49 @@ sub cronScheduler {
 
 # stats to prometheus
 sub statsFork {
-  app->log->info('statsFork: Starting Stats fork');
-  # my $prometheus = Net::Prometheus->new;
-  #
-  # # Register the metrics
-  #
-  # my $group = $prometheus->new_metricgroup( namespace => "poolBot" );
-  #
-  # my $send_failures = $group->new_counter(
-  #    name => "send_failures_total",
-  #    help => "Count of send attempts that never succeed",
-  # );
-  #
-  # my $send_rtt_histogram = $group->new_histogram(
-  #    name => "send_rtt_seconds",
-  #    help => "Distribution of send round-trip time",
-  #    buckets => $BUCKETS,
-  # );
+  app->log->info('statsFork: Starting Stats fork to prometheus');
+  my $prometheus = Net::Prometheus->new;
+  my $pbMetrics = $prometheus->new_metricgroup( namespace => "poolBot" );
+
+  ## we need to setup the different types of metrics
+  ## Pump Speed
+  my $pumpRPM = $pbMetrics->new_gauge(
+     name => "rpms",
+     help => "Current rpms of motor",
+  );
+  ## Pump watts
+  my $pumpWatt = $pbMetrics->new_gauge(
+     name => "watts",
+     help => "Current watts of motor",
+  );
+  ## Pump duration
+  my $pumpDuration = $pbMetrics->new_gauge(
+     name => "duration",
+     help => "time left for running pump",
+  );
 
   while (!$redis->get("term")) {
+    # fetch the systemStatus and parse it
+    my $systemStatus = systemStatus();
 
+    # set pump
+    $pumpRPM->set( $systemStatus->{'pump'}->{'rpm'} );
+
+    # set pump
+    $pumpWatt->set( $systemStatus->{'pump'}->{'watts'} );
+
+    # set pump
+    $pumpDuration->set( $systemStatus->{'pump'}->{'currentrunning'}->{'duration'} );
+
+    # lets update redis so that it can be scraped
+    $promOutput = $prometheus->render;
+    $redis->set(stats => $promOutput);
     sleep 10;
   }
+  exit;
 }
+
+
 # monitor fork for handling the health check and such
 sub monFork {
   app->log->info('monFork: Starting Health Check');
@@ -167,10 +187,9 @@ sub monFork {
     $redis->set(systemStatus => $systemStatus);
 
     # check if the pump is running, and what not.
-    if ($healthCheck->{'pump'}->{'currentrunning'}->{'mode'} ne 'off') {
+    if ($healthCheck->{'pump'}->{'currentrunning'}->{'mode'} eq 'off') {
       # status log
-      my $statusMessage = qq(monFork: Pump is running $healthCheck->{'pump'}->{'currentrunning'}->{'mode'} at $healthCheck->{'pump'}->{'rpm'} using $healthCheck->{'pump'}->{'watts'}, with $healthCheck->{'pump'}->{'currentrunning'}->{'remainingduration'} minutes remaining);
-      app->log->debug($statusMessage);
+      my $statusMessage = qq(monFork: Pump is $healthCheck->{'pump'}->{'currentrunning'}->{'mode'});
 
       ## do the health check
       # turn off salt if its on
@@ -184,10 +203,11 @@ sub monFork {
         relayControl('heater', 'off');
       }
     } else {
-      my $statusMessage = qq(monFork: Pump is $healthCheck->{'pump'}->{'currentrunning'}->{'mode'});
-      app->log->debug($statusMessage);
+      # pump is running
+      my $statusMessage = qq(monFork: Pump is running $healthCheck->{'pump'}->{'currentrunning'}->{'mode'} at $healthCheck->{'pump'}->{'rpm'} using $healthCheck->{'pump'}->{'watts'}, with $healthCheck->{'pump'}->{'currentrunning'}->{'remainingduration'} minutes remaining);
     }
 
+    app->log->debug($statusMessage);
     sleep 5;
   }
   return;
@@ -259,11 +279,18 @@ sub relayControl {
   }
   my $relayStatus;
 
+  # before we allow toggles we should have some limits
+  my $systemStatus = systemStatus();
+  if ($systemStatus->{'pump'}->{'currentrunning'}->{'mode'} eq 'off') {
+    if ($relay eq 'heater' || $relay eq 'salt') {
+      app->log->warn("can't enable $relay, pump is $systemStatus->{'pump'}->{'currentrunning'}->{'mode'}");
+      return 0;
+    }
+  }
+
   # write the gpio value using a shell
   if ($value eq 'on') {
-    my $command = "$gpioCMD write $relays->{$relay} 1";
-    app->log->debug("gpio command: $command");
-    `$command`;
+    `$gpioCMD write $relays->{$relay} 1`;
     $relayStatus = relayStatus($relay);
   } elsif ($value eq 'off') {
     `/usr/bin/gpio -g write $relays->{$relay} 0`;
@@ -278,7 +305,6 @@ sub relayStatus {
     return 0;
   }
   my $relayStatusPretty = "off";
-
   # get relay status
   my $relayStatus = `$gpioCMD read $relays->{$relay}`;
   chomp $relayStatus;
@@ -288,6 +314,13 @@ sub relayStatus {
     $relayStatusPretty = "on";
   }
   return $relayStatusPretty;
+}
+
+# fetch the key from redis and decode it
+sub systemStatus {
+  my $lastStatus = $redis->get("systemStatus");
+  my $systemStatus = decode_json $lastStatus;
+  return $systemStatus;
 }
 
 # Create db connection if needed
@@ -346,9 +379,8 @@ helper stopPoolFill => sub {
 # pump status
 helper fetchPumpStatus => sub {
   my $self = shift;
-  my $statusPump = $redis->get("systemStatus");
-  my $pumpStatus = decode_json $statusPump;
-  return $pumpStatus->{'pump'};
+  my $systemStatus = systemStatus();
+  return $systemStatus->{'pump'};
 };
 
 # pump run
@@ -564,6 +596,12 @@ if ($webFork) {
     my $loop = Mojo::IOLoop->singleton;
     $loop->timer( 1 => sub { exit } );
     $loop->start unless $loop->is_running; # portability
+  };
+
+  # metrics for prometheus
+  get '/metrics' => sub {
+    my $self = shift;
+    $self->redirect_to('http://google.com');
   };
 
   # Start the app
