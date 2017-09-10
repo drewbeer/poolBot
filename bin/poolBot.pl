@@ -323,6 +323,12 @@ sub systemStatus {
   return $systemStatus;
 }
 
+sub terminate {
+  # turn off all the relays
+  foreach my $pin (keys %{ $relays }) {
+    `$gpioCMD write $relays->{$pin} 0`;
+  }
+}
 # Create db connection if needed
 helper db => sub {
     if ($db) {
@@ -594,7 +600,7 @@ if ($webFork) {
     $redis->set(term => "1");
 
     my $loop = Mojo::IOLoop->singleton;
-    $loop->timer( 1 => sub { exit } );
+    $loop->timer( 1 => sub { terminate(); exit } );
     $loop->start unless $loop->is_running; # portability
   };
 
