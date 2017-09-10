@@ -149,12 +149,12 @@ sub statsFork {
     $pumpWatt->set( $systemStatus->{'pump'}->{'watts'} );
 
     # set pump
-    $pumpDuration->set( $systemStatus->{'pump'}->{'currentrunning'}->{'duration'} );
+    $pumpDuration->set( $systemStatus->{'pump'}->{'currentrunning'}->{'remainingduration'} );
 
     # lets update redis so that it can be scraped
     my $promOutput = $prometheus->render;
     $redis->set(stats => $promOutput);
-    sleep 10;
+    sleep 7;
   }
   exit;
 }
