@@ -124,10 +124,10 @@ sub relayControl {
   # write the gpio value using a shell
   if ($value eq 'on') {
     `$gpioCMD write $relays->{$relay} 1`;
-    $relayStatus = relayStatus($relay);
+    $relayStatus = getRelayStatus($relay);
   } elsif ($value eq 'off') {
     `/usr/bin/gpio -g write $relays->{$relay} 0`;
-    $relayStatus = relayStatus($relay);
+    $relayStatus = getRelayStatus($relay);
   }
   return $relayStatus;
 }
