@@ -25,7 +25,7 @@ $relays->{'valveIn'} = 5;
 $relays->{'ValveOut'} = 4;
 $relays->{'salt'} = 16;
 $relays->{'heater'} = 12;
-$relays->{'spa'} = 18;
+$relays->{'lights'} = 18;
 
 ## declares
 my $poolBot = ();
