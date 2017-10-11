@@ -30,23 +30,24 @@ $relays->{'lights'} = 18;
 ## declares
 my $poolBot = ();
 
+app->log->info('poolBot Starting Up');
+
+# GPIO setup
+# make sure all pins are set to low
+app->log->info('setting all relays to off');
+foreach my $pin (keys %{ $relays }) {
+  `$gpioCMD mode $relays->{$pin} out`;
+}
+
 # setup redis handler globally
 my $redis = Mojo::Redis2->new;
 $redis->set(term => "0");
 
 ### FUNCTIONS ###
 # Startup function
-sub startup {
-  my $self = shift;
-  app->log->info('poolBot Starting Up');
-
-  # GPIO setup
-  # make sure all pins are set to low
-  app->log->info('setting all relays to off');
-  foreach my $pin (keys %{ $relays }) {
-    `$gpioCMD mode $relays->{$pin} out`;
-  }
-}
+# sub startup {
+#   my $self = shift;
+# }
 
 # monitor fork for handling the health check and such
 sub monFork {
