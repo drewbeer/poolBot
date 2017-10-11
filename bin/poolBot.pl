@@ -44,7 +44,7 @@ sub startup {
   # make sure all pins are set to low
   app->log->info('setting all relays to off');
   foreach my $pin (keys %{ $relays }) {
-    `$gpioCMD export $relays->{$pin} low`;
+    `$gpioCMD mode $relays->{$pin} out`;
   }
 }
 
