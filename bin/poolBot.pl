@@ -72,9 +72,6 @@ sub monFork {
         $healthCheck->{'pump'} = 0;
     }
 
-    # populate redis with whatever we have
-    my $systemStatus = encode_json $healthCheck;
-    $redis->set(systemStatus => $systemStatus);
 
     my $statusMessage = "";
     # check if the pump is running, and what not.
@@ -97,6 +94,10 @@ sub monFork {
       # pump is running
       $statusMessage = qq(monFork: Pump is running $healthCheck->{'pump'}->{'currentrunning'}->{'mode'} at $healthCheck->{'pump'}->{'rpm'} using $healthCheck->{'pump'}->{'watts'} watts, with $healthCheck->{'pump'}->{'currentrunning'}->{'remainingduration'} minutes remaining);
     }
+
+    # populate redis with whatever we have
+    my $systemStatus = encode_json $healthCheck;
+    $redis->set(systemStatus => $systemStatus);
 
     app->log->debug($statusMessage);
     sleep 5;
