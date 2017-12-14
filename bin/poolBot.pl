@@ -61,12 +61,11 @@ sub monFork {
       $healthCheck->{'relay'}->{$pin} = $output;
     }
 
-    # need to be able to send these metrics to prometheius
     # read the pump
     my $pumpResponse = fetchUrl("$pumpUrl/pump", 1);
     if ($pumpResponse) {
-      foreach my $pumpStat (keys %{ $pumpResponse->[1] }) {
-        $healthCheck->{'pump'}->{$pumpStat} = $pumpResponse->[1]->{$pumpStat};
+      foreach my $pumpStat (keys %{ $pumpResponse->{1} }) {
+        $healthCheck->{'pump'}->{$pumpStat} = $pumpResponse->{1}->{$pumpStat};
       }
     } else {
         $healthCheck->{'pump'} = 0;
