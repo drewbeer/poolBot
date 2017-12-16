@@ -7,28 +7,30 @@ use Mojolicious::Lite;
 use Mojo::JSON qw(decode_json encode_json);
 use Mojo::Redis2;
 use Try::Tiny;
+use Config::Simple;
 use Data::Dumper;
 
-# debug log and
-app->log->level('debug');
+# load the Config
+my $config = new Config::Simple('../etc/poolBot.conf');
+my $cfg = $config->vars();
 
-my $pumpUrl = "http://10.42.2.19:3000";
-my $listenWebPort = 'http://*:3000';
-my $dbLocation = '../etc/poolBot.db';
+# system settings
+app->log->level($cfg->{'system.log_level'});
+my $listenWebPort = $cfg->{'system.listen'};
+
+# pump pump
+my $pumpUrl = $cfg->{'pump.url'};
 
 # gpio stuff
-my $gpioCMD = '/usr/bin/gpio -g';
+my $gpioCMD = $cfg->{'relay.gpioCMD'};
 
 # gpio relay map
 my $relays = ();
-$relays->{'valveIn'} = 5;
-$relays->{'ValveOut'} = 4;
-$relays->{'salt'} = 16;
-$relays->{'heater'} = 12;
-$relays->{'lights'} = 18;
-
-## declares
-my $poolBot = ();
+$relays->{'valveIn'} = $cfg->{'relay.valveIn'};
+$relays->{'ValveOut'} = $cfg->{'relay.ValveOut'};
+$relays->{'salt'} = $cfg->{'relay.salt'};
+$relays->{'heater'} = $cfg->{'relay.heater'};
+$relays->{'lights'} = $cfg->{'relay.lights'};
 
 app->log->info('poolBot Starting Up');
 
@@ -54,6 +56,11 @@ sub monFork {
   app->log->info('monFork: Starting Health Check');
   while (!$redis->get("term")) {
     my $healthCheck = ();
+    my $healthTime = timeStamp();
+
+    $healthCheck->{'proc'}->{'name'} = "monFork";
+    $healthCheck->{'proc'}->{'time'} = $healthTime->{'now'};
+
     # read all the relays
     foreach my $pin (keys %{ $relays }) {
       my $output = `$gpioCMD read $relays->{$pin}`;
@@ -70,7 +77,6 @@ sub monFork {
     } else {
         $healthCheck->{'pump'} = 0;
     }
-
 
     my $statusMessage = "";
     # check if the pump is running, and what not.
@@ -130,6 +136,7 @@ sub relayControl {
     `/usr/bin/gpio -g write $relays->{$relay} 0`;
     $relayStatus = getRelayStatus($relay);
   }
+  app->log->debug("Relay $relays->{$relay} now $relayStatus");
   return $relayStatus;
 }
 
@@ -161,8 +168,10 @@ sub systemStatus {
 
 sub terminate {
   # turn off all the relays
-  foreach my $pin (keys %{ $relays }) {
-    `$gpioCMD write $relays->{$pin} 0`;
+  app->log->info("Shutting down Relays");
+  foreach my $name (keys %{ $relays }) {
+    my $relayStatus = relayControl($relays->{$name},"off");
+    app->log->info("Relay $relays->{$name} now $relayStatus");
   }
 }
 
@@ -262,12 +271,18 @@ if ($webFork) {
   # exit command
   get '/quit' => sub {
     my $self = shift;
-    $self->redirect_to('http://google.com');
+    $self->redirect_to('/ping');
     $redis->set(term => "1");
 
     my $loop = Mojo::IOLoop->singleton;
     $loop->timer( 1 => sub { terminate(); exit } );
     $loop->start unless $loop->is_running; # portability
+  };
+
+  # relay control
+  get '/ping' => sub {
+      my $self  = shift;
+      return $self->render(json => {ping => "pong"});
   };
 
   # Start the app
