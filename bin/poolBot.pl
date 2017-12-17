@@ -121,6 +121,11 @@ sub webFork {
 
   # set some fork info
   my $webTime = timeStamp();
+
+  # always runs
+  under sub {
+  my $c = shift;
+
   my $webCheck = ();
   $webCheck->{'proc'}->{'name'} = "webFork";
   $webCheck->{'proc'}->{'pid'} = $webPID;
@@ -129,6 +134,9 @@ sub webFork {
   # store data in redis
   my $webStatus = encode_json $webCheck;
   $redis->set(webStatus => $webStatus);
+
+  return 1;
+};
 
   ## relay API code ##
   # relay control
@@ -168,7 +176,7 @@ sub webFork {
   # relay control
   get '/ping' => sub {
       my $self  = shift;
-      return $self->render(json => {ping => "pong"});
+      return $self->render(text => 'pong');
   };
 
   # Start the app
