@@ -173,6 +173,7 @@ sub terminate {
     my $relayStatus = relayControl($name,"off");
     app->log->info("Relay $name now $relayStatus");
   }
+  exit;
 }
 
 # pass url, and if json should be parsed
@@ -289,7 +290,7 @@ if ($webFork) {
     $redis->set(term => "1");
 
     my $loop = Mojo::IOLoop->singleton;
-    $loop->timer( 1 => sub { terminate(); exit } );
+    $loop->timer( 1 => sub { terminate(); exit; } );
     $loop->start unless $loop->is_running; # portability
   };
 
