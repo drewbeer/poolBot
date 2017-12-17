@@ -168,8 +168,8 @@ sub terminate {
   # turn off all the relays
   app->log->info("Shutting down Relays");
   foreach my $name (keys %{ $relays }) {
-    my $relayStatus = relayControl($relays->{$name},"off");
-    app->log->info("Relay $relays->{$name} now $relayStatus");
+    my $relayStatus = relayControl($name,"off");
+    app->log->info("Relay $name now $relayStatus");
   }
 }
 
