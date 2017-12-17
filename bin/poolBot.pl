@@ -17,12 +17,10 @@ my $cfg = $config->vars();
 # system settings
 app->log->level($cfg->{'system.log_level'});
 my $listenWebPort = $cfg->{'system.listen'};
+my $gpioCMD = $cfg->{'systsem.gpioCMD'};
 
 # pump pump
 my $pumpUrl = $cfg->{'pump.url'};
-
-# gpio stuff
-my $gpioCMD = $cfg->{'relay.gpioCMD'};
 
 # gpio relay map
 my $relays = ();
