@@ -110,6 +110,74 @@ sub monFork {
   return;
 }
 
+# web fork
+sub webFork {
+  my ($webPID) = @_;
+
+  # terminate if needed
+  if ($redis->get("term")) {
+    exit;
+  }
+
+  # set some fork info
+  my $webTime = timeStamp();
+  $webCheck->{'proc'}->{'name'} = "webFork";
+  $webCheck->{'proc'}->{'pid'} = $webPID;
+  $webCheck->{'proc'}->{'time'} = $webTime->{'now'};
+
+  # store data in redis
+  my $webStatus = encode_json $webCheck;
+  $redis->set(webStatus => $webStatus);
+
+  ## relay API code ##
+  # relay control
+  get '/api/relay/set/:name/:value' => sub {
+      my $self  = shift;
+      my $relay  = $self->stash('name');
+      my $value  = $self->stash('value');
+      if (!$relay && !$value) {
+        return $self->render(json => {error => "missing relay and value"});
+      }
+      my $relayStatus = $self->toggleRelay($relay, $value);
+      return $self->render(json => {relay => $relay, value => $relayStatus});
+  };
+
+  # relay control
+  get '/api/relay/status/:name' => sub {
+      my $self  = shift;
+      my $relay  = $self->stash('name');
+      if (!$relay) {
+        return $self->render(json => {error => "missing relay"});
+      }
+      my $relayStatus = $self->relayStatus($relay);
+      return $self->render(json => {relay => $relay, value => $relayStatus});
+  };
+
+  # exit command
+  get '/quit' => sub {
+    my $self = shift;
+    $self->redirect_to('/ping');
+    $redis->set(term => "1");
+
+    my $loop = Mojo::IOLoop->singleton;
+    $loop->timer( 1 => sub { terminate(); exit; } );
+    $loop->start unless $loop->is_running; # portability
+  };
+
+  # relay control
+  get '/ping' => sub {
+      my $self  = shift;
+      return $self->render(json => {ping => "pong"});
+  };
+
+  # Start the app
+  # web server listen
+  app->log->info('Starting Web Server');
+  app->config(poolBot => {listen => [$listenWebPort]});
+  app->start;
+  exit;
+}
+
 ## relay control ##
 # toggle relays
 sub relayControl {
@@ -231,7 +299,6 @@ helper fetchPumpStatus => sub {
   return $systemStatus->{'pump'};
 };
 
-
 # relay control
 helper toggleRelay => sub {
   my ($self, $relay, $value) = @_;
@@ -248,61 +315,16 @@ helper relayStatus => sub {
 
 # monitoring fork
 my $monFork = fork();
-
 if ($monFork) {
   app->log->info("Starting monitor fork - $monFork");
   monFork($monFork);
 }
 
-# webFork
+# Web Interface fork
 my $webFork = fork();
-
-# web fork module
 if ($webFork) {
-  ## relay API code ##
-  # relay control
-  get '/api/relay/set/:name/:value' => sub {
-      my $self  = shift;
-      my $relay  = $self->stash('name');
-      my $value  = $self->stash('value');
-      if (!$relay && !$value) {
-        return $self->render(json => {error => "missing relay and value"});
-      }
-      my $relayStatus = $self->toggleRelay($relay, $value);
-      return $self->render(json => {relay => $relay, value => $relayStatus});
-  };
-
-  # relay control
-  get '/api/relay/status/:name' => sub {
-      my $self  = shift;
-      my $relay  = $self->stash('name');
-      if (!$relay) {
-        return $self->render(json => {error => "missing relay"});
-      }
-      my $relayStatus = $self->relayStatus($relay);
-      return $self->render(json => {relay => $relay, value => $relayStatus});
-  };
-
-  # exit command
-  get '/quit' => sub {
-    my $self = shift;
-    $self->redirect_to('/ping');
-    $redis->set(term => "1");
-
-    my $loop = Mojo::IOLoop->singleton;
-    $loop->timer( 1 => sub { terminate(); exit; } );
-    $loop->start unless $loop->is_running; # portability
-  };
-
-  # relay control
-  get '/ping' => sub {
-      my $self  = shift;
-      return $self->render(json => {ping => "pong"});
-  };
-
-  # Start the app
-  # web server listen
-  app->log->info('Starting Web Server');
-  app->config(poolBot => {listen => [$listenWebPort]});
-  app->start;
+  webFork($webFork);
+  app->log->info("Starting web fork - $webFork");
 } # end of web fork
+
+exit;
