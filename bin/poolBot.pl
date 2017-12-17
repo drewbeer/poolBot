@@ -51,12 +51,14 @@ $redis->set(term => "0");
 
 # monitor fork for handling the health check and such
 sub monFork {
+  my ($monPID) = shift;
   app->log->info('monFork: Starting Health Check');
   while (!$redis->get("term")) {
     my $healthCheck = ();
     my $healthTime = timeStamp();
 
     $healthCheck->{'proc'}->{'name'} = "monFork";
+    $healthCheck->{'proc'}->{'pid'} = $monPID
     $healthCheck->{'proc'}->{'time'} = $healthTime->{'now'};
 
     # read all the relays
@@ -248,7 +250,7 @@ my $monFork = fork();
 
 if ($monFork) {
   app->log->info("Starting monitor fork - $monFork");
-  monFork();
+  monFork($monFork);
 }
 
 # webFork
