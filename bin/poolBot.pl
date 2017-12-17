@@ -206,6 +206,19 @@ sub fetchUrl {
 
   return 0;
 };
+
+
+sub timeStamp {
+  # returns a timestamp for the file
+  my $timestamp = ();
+  my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+
+  $timestamp->{'file'} = sprintf ( "%04d%02d%02d-%02d.%02d.%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
+  $timestamp->{'now'} = sprintf ( "%04d%02d%02d %02d:%02d:%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
+  $timestamp->{'nowDate'} = sprintf ( "%04d-%02d-%02d", $year+1900,$mon+1,$mday);
+
+  return $timestamp;
+}
 ### end of functions ###
 
 # pump status
@@ -234,7 +247,7 @@ helper relayStatus => sub {
 my $monFork = fork();
 
 if ($monFork) {
-  app->log->info('Starting monitor fork - $monFork');
+  app->log->info("Starting monitor fork - $monFork");
   monFork();
 }
 
