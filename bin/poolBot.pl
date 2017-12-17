@@ -11,7 +11,7 @@ use Config::Simple;
 use Data::Dumper;
 
 # load the Config
-my $config = new Config::Simple('../etc/poolBot.conf');
+my $config = new Config::Simple('etc/poolBot.conf');
 my $cfg = $config->vars();
 
 # system settings
