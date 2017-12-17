@@ -34,9 +34,9 @@ app->log->info('poolBot Starting Up');
 
 # GPIO setup
 # make sure all pins are set to low
-app->log->info('setting all relays to off');
-foreach my $pin (keys %{ $relays }) {
-  `$gpioCMD mode $relays->{$pin} out`;
+app->log->info('setting all relays to correct state');
+foreach my $relayName (keys %{ $relays }) {
+  `$gpioCMD mode $relays->{$relayName} out`;
 }
 
 # setup redis handler globally
@@ -234,6 +234,7 @@ helper relayStatus => sub {
 my $monFork = fork();
 
 if ($monFork) {
+  app->log->info('Starting monitor fork - $monFork');
   monFork();
 }
 
