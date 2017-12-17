@@ -121,6 +121,7 @@ sub webFork {
 
   # set some fork info
   my $webTime = timeStamp();
+  my $webCheck = ();
   $webCheck->{'proc'}->{'name'} = "webFork";
   $webCheck->{'proc'}->{'pid'} = $webPID;
   $webCheck->{'proc'}->{'time'} = $webTime->{'now'};
