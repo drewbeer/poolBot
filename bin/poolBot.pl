@@ -119,12 +119,14 @@ sub webFork {
     exit;
   }
 
-  # set some fork info
-  my $webTime = timeStamp();
+
 
   # always runs
   under sub {
   my $c = shift;
+
+  # set some fork info
+  my $webTime = timeStamp();
 
   my $webCheck = ();
   $webCheck->{'proc'}->{'name'} = "webFork";
