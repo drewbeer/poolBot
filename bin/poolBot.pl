@@ -102,7 +102,7 @@ sub monFork {
 
     # populate redis with whatever we have
     my $systemStatus = encode_json $healthCheck;
-    $redis->set(systemStatus => $systemStatus);
+    $redis->set('systemStatus' => $systemStatus);
 
     app->log->debug($statusMessage);
     sleep 5;
