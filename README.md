@@ -1,6 +1,8 @@
 poolBot
 ======
 
+documented mostly at https://drew.beer/blog/blog/project-poolbot
+
 Raspberry PI powered pool automation project
 
 this is basically broken into a bunch of different systems.
