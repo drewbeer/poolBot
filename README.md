@@ -7,7 +7,7 @@ Raspberry PI powered pool automation project
 
 this is basically broken into a bunch of different systems.
 
-- deviceUI.py this is responsible for the physical aspect of the system
+- deviceUI.py this is responsible for the physical aspect of the system (unfinished, and not in use right now)
 - poolBot.pl this is the api wrapper that is sort of the center of everything
 
 the one that really matters is the poolBot.pl. this is a perl web server that is bascially a api to the different systems. so it talks to the nodejs pool controler, rachio, and the gpio ports that are wired in.
