@@ -20,6 +20,9 @@ sub mqttPublish {
   my $subTopic = shift;
   my $data = shift;
   my $mqttConfig = getConfig('mqtt');
+  unless ($mqttConfig->{'host'}) {
+    return;
+  }
   my $mqtt = Net::MQTT::Simple->new($mqttConfig->{'host'});
 
   foreach my $field (keys %{$data}) {
@@ -38,6 +41,9 @@ sub mqttPublishValue {
   my $value = shift;
 
   my $mqttConfig = getConfig('mqtt');
+  unless ($mqttConfig->{'host'}) {
+    return;
+  }
   my $mqtt = Net::MQTT::Simple->new($mqttConfig->{'host'});
 
   my $topic = "$mqttConfig->{'topic'}/$subTopic/$field";
