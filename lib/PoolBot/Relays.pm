@@ -9,6 +9,7 @@ use warnings;
 use Log::Log4perl qw(get_logger);
 use FindBin qw($Bin);
 use PoolBot::Common;
+use PoolBot::MQTT;
 
 my $log = get_logger("PoolBot::Relays");
 
@@ -31,6 +32,10 @@ sub relaySet {
   sleep 1;
   my $relayStatus = relayGet($relay);
   $log->debug("relay $relay now $relayStatus");
+
+  # push the change to mqtt rigth away
+  $relay =~ s/_/ /g;
+  mqttPublishValue($relay,'switch', $relayStatus);
 
   return $relayStatus;
 }

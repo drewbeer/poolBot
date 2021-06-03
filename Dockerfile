@@ -90,7 +90,8 @@ cpanm --no-wget --notest \
   EV \
   InfluxDB::LineProtocol \
   AnyEvent::DateTime::Cron \
-  AnyEvent::HTTPD
+  AnyEvent::HTTPD \
+  Net::MQTT::Simple
 
 
   # copy local files

@@ -49,6 +49,20 @@ sub startHTTPd {
         $req->respond ({ content => ['text/html',"pong"]});
         $httpd->stop_request;
     },
+    '/mode' => sub {
+        my ($httpd, $req) = @_;
+        $log->debug('/mode called');
+        my $json = $req->content();
+        my $data = decode_json $json;
+        my $response;
+        if ($data->{'name'}) {
+          $response = modeRun($data->{'name'}, $data->{'duration'});
+        } else {
+          $response = 'missing values for setting pool mode';
+        }
+        $req->respond ({ content => ['text/html',$response]});
+        $httpd->stop_request;
+    },
     '/pool/run' => sub {
         my ($httpd, $req) = @_;
         $log->debug('/pool/run called');
@@ -69,7 +83,7 @@ sub startHTTPd {
         $log->debug('/pool/stop called');
         my ($httpd, $req) = @_;
         my $json = $req->content();
-        my $response = stopPool('salt');
+        my $response = stopPool();
         $req->respond ({ content => ['text/html',$response]});
         $httpd->stop_request;
     },

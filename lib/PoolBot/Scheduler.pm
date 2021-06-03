@@ -12,6 +12,7 @@ use Log::Log4perl qw(get_logger);
 use AnyEvent::DateTime::Cron;
 use PoolBot::Common;
 use PoolBot::System;
+use PoolBot::MatterMost;
 
 # we should load the cron and
 sub startScheduler {
@@ -26,22 +27,24 @@ sub startScheduler {
   # if there are multiple tasks
   if(ref($schedule->{'tasks'}) eq 'ARRAY') {
     foreach my $task (@{$schedule->{'tasks'}}) {
-      my ($time, $program, $duration, $relay) = split(/\|/, $schedule->{$task});
-      $log->info("adding $task at $time");
+      my @taskDetails = split(/\,/, $schedule->{$task});
+      $log->info("adding $task at $taskDetails[0]");
+      notifyMatter("adding $task at $taskDetails[0]");
 
       # add the cron entry
       $cron->debug(1)->add(
-          $time, name   => $task, single => 1, \&schedRun,
+          $taskDetails[0], name   => $task, single => 1, \&schedRun,
       );
       $cronCount++;
     }
   } else {
-    my ($time, $program, $duration, $relay) = split(/\|/, $schedule->{$schedule->{'tasks'}});
-    $log->info("adding $schedule->{'tasks'} at $time hour");
+    my @taskDetails = split(/\,/, $schedule->{$schedule->{'tasks'}});
+    $log->info("adding $schedule->{'tasks'} at $taskDetails[0] hour");
+    notifyMatter("adding $schedule->{'tasks'} at $taskDetails[0] hour");
 
     # add the cron entry
     $cron->debug(1)->add(
-        $time, name   => $schedule->{'tasks'}, single => 1,
+        $taskDetails[0], name   => $schedule->{'tasks'}, single => 1,
         \&schedRun,
     );
     $cronCount++;
@@ -67,11 +70,11 @@ sub schedRun {
 
   # pool maint schedule
   if ($jobName =~ /^pumpService/) {
-    my ($time, $mode) = split(/\|/, $schedule->{$jobName});
+    my ($time, $mode) = split(/\,/, $schedule->{$jobName});
     servicePumpController($mode);
   } else {
-    my ($time, $program, $duration, $relay) = split(/\|/, $schedule->{$jobName});
-    runPool($program, $duration, $relay);
+    my ($time, $modeName) = split(/\,/, $schedule->{$jobName});
+    modeRun($modeName);
   }
 
   $cv->end

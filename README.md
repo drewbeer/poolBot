@@ -17,4 +17,11 @@ this project relies on a few other great projects, especially because that means
 to have nodejs-poolController installed and running. its whats responsible for talking to either your pool controller, pump, salt, or whatever it can control.
 also if you have a rachio, and you've replaced the valve to a zone, then you can also control the pool fill.
 
+### updates - 2021-01
+you no longer need nodered to handle scheduling, thats now built into the new poolBot code, also it pushes to influx itself instead of using nodered to scrape.
 
+there is still an api to start and stop things, and get status of the system and relays. will be adding mqtt soon.
+
+### updates - 2021-6
+node-red is pretty much gone, and is not needed any longer. poolbot pushes to both mqtt, and to influx v3. new modes which can be called via api, and by scheduler
+settings has been updated to reflect that, and also how to handle safety measures.

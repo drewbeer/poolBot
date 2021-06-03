@@ -2,7 +2,7 @@ package PoolBot::System;
 
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT = qw(heartbeat initSystem getSystemInfo systemShutdown runPool stopPool servicePumpController);
+@EXPORT = qw(heartbeat initSystem getSystemInfo systemShutdown runPool stopPool servicePumpController modeRun);
 
 use strict;
 use warnings;
@@ -13,6 +13,65 @@ use PoolBot::MatterMost;
 use PoolBot::Pump;
 use PoolBot::Relays;
 use PoolBot::InfluxDB;
+use PoolBot::MQTT;
+
+# should replace runPool below, and you should only be able to fire off
+# specific modes, and not like just the pump i guess.
+# [modes]
+# daily='pump:3:360,SCG'
+# party='pump:3:480,SCG,Heater,Pool_Lights'
+# spa='pump:2:300,SCG,Spa_Drain_Valve,Spa_Return_Valve,Heater'
+
+sub modeRun {
+  my $modeName = shift;
+  my $durationOveride = shift;
+
+  my $duration;
+  my $pumpProgram;
+  my @relays;
+  my $pump = 1;
+
+  my $log = get_logger("PoolBot::System");
+
+  # gather all the mode details.
+  my $config = getConfig('modes');
+  my $modeDetails = $config->{$modeName};
+  my (@modeObjects) = split(/\,/,$modeDetails);
+  foreach my $mItem (@modeObjects) {
+    if ($mItem =~ /^pump/) {
+      $mItem =~ s/^pump\://;
+      ($pumpProgram, $duration) = split(/\:/,$mItem);
+    } else {
+      push(@relays, $mItem);
+    }
+  }
+
+  # if the duration is overridden.
+  if ($durationOveride) {
+    $duration = $durationOveride;
+  }
+
+  # how lets run the mode.
+  my $relayNames = join(', ', @relays);
+  my $message = "pool $modeName starting, running pump, and $relayNames for $duration minutes";
+  $log->info($message);
+  notifyMatter($message);
+
+  # start the pump
+  pumpRun($pump, $pumpProgram, $duration);
+
+  # now turn on relays.
+  foreach my $relay (@relays) {
+    relaySet($relay, 1);
+  }
+
+  # publish the mode
+  mqttPublishValue('Mode','Name', $modeName);
+  mqttPublishValue('Mode','Duration', $duration);
+  mqttPublishValue('Mode','Relays', $relayNames);
+
+  return $message;
+}
 
 sub runPool {
   my $program = shift;
@@ -36,8 +95,6 @@ sub runPool {
 }
 
 sub stopPool {
-  my $relay = shift;
-
   my $log = get_logger("PoolBot::System");
   my $pump = 1;
 
@@ -46,10 +103,6 @@ sub stopPool {
   notifyMatter($message);
   pumpStop($pump);
 
-  if ($relay) {
-    $log->debug("starting relay $relay");
-    relaySet($relay, 0);
-  }
   return $message;
 }
 
@@ -84,19 +137,22 @@ sub heartbeat {
     $log->info("Pump is $pumpStatus->{'currentrunning'}->{'mode'}");
 
     ## do the health check
-    # turn off salt if its on
-    if ($relayStatus->{'salt'}) {
-      $log->warn('pump may be off, turning off salt');
-      notifyMatter("pump is $pumpStatus->{'currentrunning'}->{'mode'}, shutting down chlorine generator");
-      relaySet('salt', 0);
+    my $pumpCfg = getConfig('pump');
+    my (@safetyItems) = split(/\,/,$pumpCfg->{'safety'});
+    foreach my $sItem (@safetyItems) {
+      my $name = $sItem;
+      $name =~ s/\_/ /g;
+      if ($relayStatus->{$sItem}) {
+        $log->warn("pump may be off, turning off $name");
+        notifyMatter("pump is $pumpStatus->{'currentrunning'}->{'mode'}, shutting down $name");
+        relaySet($sItem, 0);
+      }
     }
 
-    # turn off heater if its on
-    if ($relayStatus->{'heater'}) {
-      $log->warn('monFork: pump may be off, turning off heater');
-      relaySet('heater', 0);
-    }
-
+    # update mqtt
+    mqttPublishValue('Mode','Name', 'Off');
+    mqttPublishValue('Mode','Duration', 0);
+    mqttPublishValue('Mode','Relays', '');
   } else {
     # pump is running
     $log->info("Pump is running $pumpStatus->{'currentrunning'}->{'mode'} at $pumpStatus->{'rpm'} using $pumpStatus->{'watts'} watts, with $pumpStatus->{'currentrunning'}->{'remainingduration'} minutes remaining");
@@ -143,6 +199,7 @@ sub doStats {
       $pStats->{$field} = $data->{'pump'}->{$field};
     }
     writeInflux('pool_pump',$pStats, $tags);
+    mqttPublish('Pump', $pStats);
   }
 
 
@@ -153,6 +210,11 @@ sub doStats {
       my $tags = { location=>'pool', relay => $relay };
       $relayStatus->{'status'} = $data->{'relays'}->{$relay};
       writeInflux('pool_relays',$relayStatus, $tags);
+
+      # publish relay data to mqtt
+      my $mqtt = { switch => $data->{'relays'}->{$relay}, };
+      $relay =~ s/_/ /g;
+      mqttPublish($relay, $mqtt);
     }
 
   }
